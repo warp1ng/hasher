@@ -1,2 +1,2 @@
-cd hasher
-cargo build --release
+#### cd hasher
+#### cargo build --release
