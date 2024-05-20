@@ -33,7 +33,7 @@ fn main() {
     };
     let mut reader = BufReader::new(file);
     let mut hasher = Sha256::new();
-    let mut buffer = [0; 1024];
+    let mut buffer = [0; 8192];
 
     loop {
         let bytes_read = match reader.read(&mut buffer) {
@@ -60,6 +60,8 @@ fn main() {
         if args.len() == 4 && args[3].len() == 64 {
             let arg_hash = &args[3];
             let lower_arg_hash = arg_hash.to_lowercase();
+            println!("{lower_computed_hash}");
+            println!("{lower_arg_hash}");
             if lower_computed_hash == lower_arg_hash {
                 println!("Checksums match!");
             } else {
