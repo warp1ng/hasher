@@ -5,7 +5,12 @@ use sha2::{Sha256, Digest};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if &args[1].to_lowercase() != "-s" && &args[1].to_lowercase() != "-c" && &args[1].to_lowercase() != "-h" {
+    if args.len() < 2 || args[1].is_empty() {
+        println!("Use hasher -h for help");
+        return;
+    }
+    let arg = &args[1].to_lowercase();
+    if arg != "-s" && arg != "-c" && arg != "-h" {
         println!("Use hasher -h for help");
         return;
     }
