@@ -26,7 +26,6 @@ fn main() {
         return;
     }
 
-
     let file_name = &args[2];
 
     let file = match File::open(file_name) {
@@ -72,6 +71,42 @@ fn main() {
             } else {
                 println!("Checksums do not match!");
             }
+        } else if &args[1] == "-c" {
+            if args.len() == 4 && args[3].contains(".") {
+                let file_name2 = &args[3];
+                let file2 = match File::open(file_name2) {
+                    Ok(file2) => file2,
+                    Err(_) => {
+                        println!("Failed to open the second file {}", &file_name2);
+                        return;
+                    }
+                };
+                let mut reader2 = BufReader::new(file2);
+                let mut hasher2 = Sha256::new();
+                let mut buffer2 = [0; 8192];
+
+                loop {
+                    let bytes_read2 = match reader2.read(&mut buffer2) {
+                        Ok(0) => break,
+                        Ok(n) => n,
+                        Err(_) => {
+                            println!("Failed to read the second file");
+                            return;
+                        }
+                    };
+                    hasher2.update(&buffer2[..bytes_read2]);
+                }
+                let computed_hash2 = format!("{:x}", hasher2.finalize());
+                let lower_computed_hash2 = computed_hash2.to_lowercase();
+                println!("{lower_computed_hash}");
+                println!("{lower_computed_hash2}");
+                if lower_computed_hash == lower_computed_hash2 {
+                    println!("Checksums match!");
+                } else {
+                    println!("Checksums do not match!");
+                }
+            }
+            
         } else {
             if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
                 let hash_from_external_file: String = sha256_content.trim().chars().take(64).collect();
@@ -88,7 +123,6 @@ fn main() {
             }
         }
     }
-
 }
 
 fn read_sha256_file(file_name: &str) -> io::Result<String> {
