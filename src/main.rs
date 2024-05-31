@@ -15,10 +15,10 @@ fn main() {
         return;
     }
     if &args[1] == "-h" {
-        println!("Usage: hasher [option] [input_file] <sha256>");
+        println!("Usage: hasher [option] [input_file] [sha256_hash]");
         println!("-s prints the computed sha256 checksum");
-        println!("-c compares the provided checksum in the <sha256> section to the file's computed checksum");
-        println!("-c also tries to look after a .sha256 file, if it's found it's going to read that instead of the <sha256>");
+        println!("-c compares the computed checksum to the [sha256_hash] where you can input your own hash or a filename");
+        println!("-c also tries to look after a .sha256 file if nothing is typed in the [sha256_hash] section");
         return;
     }
     if args.len() < 3 {
@@ -60,8 +60,8 @@ fn main() {
         return;
     }
 
-    if &args[1] == "-c" {
-        if args.len() == 4 && args[3].len() == 64 {
+    if &args[1] == "-c" && args.len() == 4 {
+        if args[3].len() == 64 {
             let arg_hash = &args[3];
             let lower_arg_hash = arg_hash.to_lowercase();
             println!("{lower_computed_hash}");
@@ -71,59 +71,58 @@ fn main() {
             } else {
                 println!("Checksums do not match!");
             }
-        } else if &args[1] == "-c" {
-            if args.len() == 4 && args[3].contains(".") {
-                let file_name2 = &args[3];
-                let file2 = match File::open(file_name2) {
-                    Ok(file2) => file2,
-                    Err(_) => {
-                        println!("Failed to open the second file {}", &file_name2);
-                        return;
-                    }
-                };
-                let mut reader2 = BufReader::new(file2);
-                let mut hasher2 = Sha256::new();
-                let mut buffer2 = [0; 8192];
-
-                loop {
-                    let bytes_read2 = match reader2.read(&mut buffer2) {
-                        Ok(0) => break,
-                        Ok(n) => n,
-                        Err(_) => {
-                            println!("Failed to read the second file");
-                            return;
-                        }
-                    };
-                    hasher2.update(&buffer2[..bytes_read2]);
-                }
-                let computed_hash2 = format!("{:x}", hasher2.finalize());
-                let lower_computed_hash2 = computed_hash2.to_lowercase();
-                println!("{lower_computed_hash}");
-                println!("{lower_computed_hash2}");
-                if lower_computed_hash == lower_computed_hash2 {
-                    println!("Checksums match!");
-                } else {
-                    println!("Checksums do not match!");
-                }
-            }
-            
-        } else {
-            if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
-                let hash_from_external_file: String = sha256_content.trim().chars().take(64).collect();
-                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-                println!("{lower_computed_hash}");
-                println!("{lower_hash_from_external_file}");
-                if lower_hash_from_external_file == lower_computed_hash {
-                    println!("Checksums match!");
-                } else {
-                    println!("Checksums do not match!");
-                }
-            } else {
-                println!("Failed to read the .sha256 file")
-            }
+        } 
+    if &args[1] == "-c" && args.len() == 4 && args[3].len() > 3 && args[3].len() < 60 {
+              let file_name2 = &args[3];
+              let file2 = match File::open(file_name2) {
+                  Ok(file2) => file2,
+                  Err(_) => {
+                      println!("Failed to open the second file {}", &file_name2);
+                      return;
+                  }
+              };
+              let mut reader2 = BufReader::new(file2);
+              let mut hasher2 = Sha256::new();
+              let mut buffer2 = [0; 8192];
+              loop {
+                  let bytes_read2 = match reader2.read(&mut buffer2) {
+                      Ok(0) => break,
+                      Ok(n) => n,
+                      Err(_) => {
+                          println!("Failed to read the second file");
+                          return;
+                      }
+                  };
+                  hasher2.update(&buffer2[..bytes_read2]);
+              }
+              let computed_hash2 = format!("{:x}", hasher2.finalize());
+              let lower_computed_hash2 = computed_hash2.to_lowercase();
+              println!("{lower_computed_hash}");
+              println!("{lower_computed_hash2}");
+              if lower_computed_hash == lower_computed_hash2 {
+                  println!("Checksums match!");
+              } else {
+                  println!("Checksums do not match!");
+              }
+          }
+        }
+    if &args[1] == "-c" {
+      if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
+          println!("[sha256_hash] was left empty but hasher found an external .sha256 file and will use that instead");
+          let hash_from_external_file: String = sha256_content.trim().chars().take(64).collect();
+          let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
+          println!("{lower_computed_hash}");
+          println!("{lower_hash_from_external_file}");
+          if lower_hash_from_external_file == lower_computed_hash {
+              println!("Checksums match!");
+          } else {
+              println!("Checksums do not match!");
+          }
+      } else {
+          println!("Failed to read the .sha256 file")
+      }
         }
     }
-}
 
 fn read_sha256_file(file_name: &str) -> io::Result<String> {
     let mut sha256_file = File::open(file_name)?;
