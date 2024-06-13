@@ -2,6 +2,7 @@ use std::io::{self, Read, BufReader};
 use std::{env};
 use std::fs::{File};
 use sha2::{Sha256, Digest};
+use colored::*;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -64,12 +65,15 @@ fn main() {
         if args[3].len() == 64 {
             let arg_hash = &args[3];
             let lower_arg_hash = arg_hash.to_lowercase();
-            println!("{lower_computed_hash}");
-            println!("{lower_arg_hash}");
+            let (colored_lower_computed_hash, colored_lower_arg_hash) = highlight_differences(&lower_computed_hash, &lower_arg_hash);
+            println!("{}", colored_lower_computed_hash);
+            println!("{}", colored_lower_arg_hash);
+            //println!("{lower_computed_hash}");
+            //println!("{lower_arg_hash}");
             if lower_computed_hash == lower_arg_hash {
-                println!("Checksums match!");
+                println!("{}", "Checksums match!".bright_green());
             } else {
-                println!("Checksums do not match!");
+                println!("{}", "Checksums do not match!".bright_red());
             }
         } 
     if &args[1] == "-c" && args.len() == 4 && args[3].len() > 3 && args[3].len() < 60 {
@@ -97,26 +101,28 @@ fn main() {
               }
               let computed_hash2 = format!("{:x}", hasher2.finalize());
               let lower_computed_hash2 = computed_hash2.to_lowercase();
-              println!("{lower_computed_hash}");
-              println!("{lower_computed_hash2}");
+              let (colored_lower_computed_hash, colored_lower_computed_hash2) = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
+              println!("{}", colored_lower_computed_hash);
+              println!("{}", colored_lower_computed_hash2);
               if lower_computed_hash == lower_computed_hash2 {
-                  println!("Checksums match!");
+                  println!("{}", "Checksums match!".bright_green());
               } else {
-                  println!("Checksums do not match!");
+                  println!("{}", "Checksums do not match!".bright_red());
               }
           }
         }
-    if &args[1] == "-c" && args[3].len() < 3 {
+    if &args[1] == "-c" && args.len() == 3 {
       if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
           println!("[sha256_hash] was left empty but hasher found an external .sha256 file and will use that instead");
           let hash_from_external_file: String = sha256_content.trim().chars().take(64).collect();
           let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-          println!("{lower_computed_hash}");
-          println!("{lower_hash_from_external_file}");
+          let (colored_lower_computed_hash, colored_lower_hash_from_external_file) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
+          println!("{}", colored_lower_computed_hash);
+          println!("{}", colored_lower_hash_from_external_file);
           if lower_hash_from_external_file == lower_computed_hash {
-              println!("Checksums match!");
+              println!("{}", "Checksums match!".bright_green());
           } else {
-              println!("Checksums do not match!");
+              println!("{}", "Checksums do not match!".bright_red());
           }
       } else {
           println!("Failed to read the .sha256 file")
@@ -129,4 +135,35 @@ fn read_sha256_file(file_name: &str) -> io::Result<String> {
     let mut sha256_content = String::new();
     sha256_file.read_to_string(&mut sha256_content)?;
     Ok(sha256_content)
+}
+
+fn highlight_differences(a: &str, b: &str) -> (String, String) {
+    // Determine the maximum length of the two strings
+    let max_len = std::cmp::max(a.len(), b.len());
+    
+    // Pad the shorter string with spaces
+    let a_padded = format!("{:width$}", a, width = max_len);
+    let b_padded = format!("{:width$}", b, width = max_len);
+
+    let result_a: String = a_padded.chars().zip(b_padded.chars())
+        .map(|(char_a, char_b)| {
+            if char_a == char_b {
+                char_a.to_string().bright_green().to_string()
+            } else {
+                char_a.to_string().bright_red().to_string()
+            }
+        })
+        .collect();
+
+    let result_b: String = a_padded.chars().zip(b_padded.chars())
+        .map(|(char_a, char_b)| {
+            if char_a == char_b {
+                char_b.to_string().bright_green().to_string()
+            } else {
+                char_b.to_string().bright_red().to_string()
+            }
+        })
+        .collect();
+
+    (result_a, result_b)
 }
