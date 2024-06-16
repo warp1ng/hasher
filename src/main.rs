@@ -114,11 +114,8 @@ fn main() {
               }
           }
         }
-<<<<<<< HEAD
+    
     if &args[1] == "-c" && args[3].len() == 0 {
-=======
-    if &args[1] == "-c" && args.len() == 3 {
->>>>>>> recovered-branch
       if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
           println!("[sha256_hash] was left empty but hasher found an external .sha256 file and will use that instead");
           let hash_from_external_file: String = sha256_content.trim().chars().take(64).collect();
