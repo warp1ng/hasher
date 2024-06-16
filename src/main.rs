@@ -4,6 +4,7 @@ use std::fs::{File};
 use sha2::{Sha256, Digest};
 
 fn main() {
+    // Collecting args
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 || args[1].is_empty() {
         println!("Use hasher -h for help");
@@ -14,6 +15,7 @@ fn main() {
         println!("Use hasher -h for help");
         return;
     }
+    // Printing instructions
     if &args[1] == "-h" {
         println!("Usage: hasher [option] [input_file] [sha256_hash]");
         println!("-s prints the computed sha256 checksum");
@@ -55,6 +57,7 @@ fn main() {
     let lower_computed_hash = computed_hash.to_lowercase();
     let sha256_file_name = format!("{}.sha256", file_name);
 
+    // Just prints the computed hash
     if &args[1] == "-s" {
         println!("{lower_computed_hash}");
         return;
@@ -122,8 +125,9 @@ fn main() {
           println!("Failed to read the .sha256 file")
       }
         }
-    }
+}
 
+// This reads the sha256 from an external file, if one is found
 fn read_sha256_file(file_name: &str) -> io::Result<String> {
     let mut sha256_file = File::open(file_name)?;
     let mut sha256_content = String::new();
