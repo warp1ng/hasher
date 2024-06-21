@@ -5,7 +5,7 @@ Use `hasher -h` for a list of the command line arguments
 
 Use `hasher -s [filename]` to compute the sha256 hash of the file
 
-Use `hasher -c [filename] [sha256/sha256file/otherfile]` to compare the input's computed checksum against [sha256] where you can input your own hash, a .sha256 file or another filename.
+Use `hasher -c [filename] [sha256/sha256file/otherfile]` to compare the input's computed checksum against `[sha256]` where you can input your own hash, a .sha256 file or another filename.
 
 ## How to build
 1. Run `git clone https://github.com/warp1ng/hasher`
