@@ -59,9 +59,7 @@ fn main() {
         println!("{}", lower_computed_hash.bright_green());
         return;
     }
-
     if &args[1] == "-c" && args.len() == 4 && args[3].len() == 64 {
-        if args[3].len() == 64 {
             let arg_hash = &args[3];
             let lower_arg_hash = arg_hash.to_lowercase();
             let (colored_lower_computed_hash, colored_lower_arg_hash) = highlight_differences(&lower_computed_hash, &lower_arg_hash);
@@ -69,14 +67,11 @@ fn main() {
             println!("{}", colored_lower_arg_hash);
             if lower_computed_hash == lower_arg_hash {
                 println!("{}", "Checksums match!".bright_green());
-                return;
             } else {
                 println!("{}", "Checksums do not match!".bright_red());
-                return;
             }
-        } 
-
-    if &args[1] == "-c" && args.len() == 4 && args[3].len() < 60 {
+        }
+    if &args[1] == "-c" && args.len() > 3 && args[3].len() < 60 && !args[3].to_string().to_lowercase().contains(&sha256_file_name){
               let file_name2 = &args[3];
               let file2 = match File::open(file_name2) {
                   Ok(file2) => file2,
@@ -106,13 +101,11 @@ fn main() {
               println!("{}", colored_lower_computed_hash2);
               if lower_computed_hash == lower_computed_hash2 {
                   println!("{}", "Checksums match!".bright_green());
-                  return;
               } else {
                   println!("{}", "Checksums do not match!".bright_red());
-                  return;
               }
           }
-        }
+        
     if &args[1] == "-c" && args.len() == 4 && args[3].to_string().to_lowercase().contains(&sha256_file_name) {
          if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
              let text: String = sha256_content;
