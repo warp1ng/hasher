@@ -3,9 +3,9 @@ Download the executable from the [releases](https://github.com/warp1ng/hasher/re
 
 Use `hasher -h` for a list of the command line arguments
 
-Use `hasher -s [filename]` to calculate the sha256 hash of the file
+Use `hasher -s [filename]` to compute the sha256 hash of the file
 
-Use `hasher -c [filename] [sha256_hash OR other file]` to compare a file's calculated hash against your own; you can input your own checksum or another filename in the [sha256_hash] section.
+Use `hasher -c [filename] [sha256_hash OR other file]` to compare a file's computed hash against your own; you can input your own checksum or another filename in the [sha256_hash] section.
 If you don't input anything in the [[sha256_hash OR other file] section hasher will try to find a .sha256 file and use that instead.
 
 ## How to build
