@@ -1,6 +1,6 @@
 use std::io::{self, Read, BufReader};
-use std::{env};
-use std::fs::{File};
+use std::env;
+use std::fs::File;
 use sha2::{Sha256, Digest};
 use colored::*;
 
@@ -16,10 +16,10 @@ fn main() {
         return;
     }
     if &args[1] == "-h" {
-        println!("Usage: hasher [option] [input_file] [sha256_hash]");
+        println!("Usage: hasher [switch] [filename] [sha256/sha256file/otherfile]");
         println!("-s prints the computed sha256 checksum");
-        println!("-c compares the computed checksum to the [sha256_hash] where you can input your own hash or a filename");
-        println!("-c also tries to look after a .sha256 file if nothing is typed in the [sha256_hash] section");
+        println!("-c compares the computed checksum to the [sha256] where you can input your own hash, a .sha256 file or another filename");
+        println!("-c also tries to look after a .sha256 file if nothing is typed in the [sha256] section");
         return;
     }
     if args.len() < 3 {
@@ -27,25 +27,24 @@ fn main() {
         return;
     }
 
-    let file_name = &args[2];
-
+    let file_name = &args[2].trim().replace(".\\", "");
+    
     let file = match File::open(file_name) {
         Ok(file) => file,
         Err(_) => {
-            println!("Failed to open the file {}", &file_name);
+            eprintln!("Failed to open the file {}", &file_name);
             return;
         }
     };
     let mut reader = BufReader::new(file);
     let mut hasher = Sha256::new();
-    let mut buffer = [0; 8192];
-
+    let mut buffer = [0; 16384];
     loop {
         let bytes_read = match reader.read(&mut buffer) {
             Ok(0) => break,
             Ok(n) => n,
             Err(_) => {
-                println!("Failed to read the file");
+                eprintln!("Failed to read the file {}", &file_name);
                 return;
             }
         };
@@ -61,7 +60,7 @@ fn main() {
         return;
     }
 
-    if &args[1] == "-c" && args.len() == 4 {
+    if &args[1] == "-c" && args.len() == 4 && args[3].len() == 64 {
         if args[3].len() == 64 {
             let arg_hash = &args[3];
             let lower_arg_hash = arg_hash.to_lowercase();
@@ -70,28 +69,31 @@ fn main() {
             println!("{}", colored_lower_arg_hash);
             if lower_computed_hash == lower_arg_hash {
                 println!("{}", "Checksums match!".bright_green());
+                return;
             } else {
                 println!("{}", "Checksums do not match!".bright_red());
+                return;
             }
         } 
-    if &args[1] == "-c" && args.len() == 4 && args[3].len() > 3 && args[3].len() < 60 {
+
+    if &args[1] == "-c" && args.len() == 4 && args[3].len() < 60 {
               let file_name2 = &args[3];
               let file2 = match File::open(file_name2) {
                   Ok(file2) => file2,
                   Err(_) => {
-                      println!("Failed to open the second file {}", &file_name2);
+                      eprintln!("Failed to open the second file {}", file_name2);
                       return;
                   }
               };
               let mut reader2 = BufReader::new(file2);
               let mut hasher2 = Sha256::new();
-              let mut buffer2 = [0; 8192];
+              let mut buffer2 = [0; 16384];
               loop {
                   let bytes_read2 = match reader2.read(&mut buffer2) {
                       Ok(0) => break,
                       Ok(n) => n,
                       Err(_) => {
-                          println!("Failed to read the second file");
+                          eprintln!("Failed to read the second file {}", file_name2);
                           return;
                       }
                   };
@@ -104,35 +106,50 @@ fn main() {
               println!("{}", colored_lower_computed_hash2);
               if lower_computed_hash == lower_computed_hash2 {
                   println!("{}", "Checksums match!".bright_green());
+                  return;
               } else {
                   println!("{}", "Checksums do not match!".bright_red());
+                  return;
               }
           }
         }
-    
-    if &args[1] == "-c" && args.len() < 4 {
-      if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
-          println!("[sha256_hash] was left empty but hasher found an external .sha256 file and will use that instead");
-          let hash_from_external_file: String = sha256_content.trim().chars().take(64).collect();
-          let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-          let (colored_lower_computed_hash, colored_lower_hash_from_external_file) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
-          println!("{}", colored_lower_computed_hash);
-          println!("{}", colored_lower_hash_from_external_file);
-          if lower_hash_from_external_file == lower_computed_hash {
-              println!("{}", "Checksums match!".bright_green());
-          } else {
-              println!("{}", "Checksums do not match!".bright_red());
-          }
-      } else {
-          println!("Failed to read the .sha256 file")
-      }
-        }
+    if &args[1] == "-c" && args.len() == 4 && args[3].to_string().to_lowercase().contains(&sha256_file_name) {
+         if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
+             let text: String = sha256_content;
+             if let Some(hash_from_external_file) = find_sha256_string(&text) {
+               let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
+               let (colored_lower_computed_hash, colored_lower_hash_from_external_file) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
+               println!("Hasher read directly from {}", sha256_file_name);
+               println!("{}", colored_lower_computed_hash);
+               println!("{}", colored_lower_hash_from_external_file);
+               if lower_hash_from_external_file == lower_computed_hash {
+                   println!("{}", "Checksums match!".bright_green());
+               } else {
+                   println!("{}", "Checksums do not match!".bright_red());
+               }
+//           } else {
+//               println!("Failed to read the .sha256 file");
+           }
+         }
+    }
 }
-
 fn read_sha256_file(file_name: &str) -> io::Result<String> {
+    let file_metadata = std::fs::metadata(&file_name)?;
+    const MAX_FILE_SIZE_BYTES: u64 = 100 * 1024 * 1024;
+    if file_metadata.len() > MAX_FILE_SIZE_BYTES {
+        eprintln!("{} size exceeds 100MB", file_name);
+        return Ok(Default::default());
+    }
     let mut sha256_file = File::open(file_name)?;
     let mut sha256_content = String::new();
-    sha256_file.read_to_string(&mut sha256_content)?;
+    sha256_file.read_to_string(&mut sha256_content).map_err(|e| {
+        eprintln!("Failed to read {} file content: {}", file_name, e);
+        e
+    })?;
+    if sha256_content.is_empty() {
+        eprintln!("{} file is empty", file_name);
+        return Ok(Default::default());
+    }
     Ok(sha256_content)
 }
 
@@ -162,4 +179,24 @@ fn highlight_differences(a: &str, b: &str) -> (String, String) {
         .collect();
 
     (result_a, result_b)
+}
+
+fn find_sha256_string(text: &str) -> Option<&str> {
+    let mut index = 0;
+
+    while let Some(start) = text[index..].find(|c: char| c.is_ascii_hexdigit()) {
+        let start = index + start;
+        if start + 64 <= text.len() {
+            let found_str = &text[start..start + 64];
+            if found_str.chars().all(|c| c.is_ascii_hexdigit()) {
+                return Some(found_str);
+            } else {
+                index = start + 1;
+            }
+        } else {
+            break;
+        }
+    }
+
+    None
 }
