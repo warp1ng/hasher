@@ -1,4 +1,4 @@
-use std::io::{self, Read, BufReader};
+use std::io::{self, BufReader, Read, Write};
 use std::env;
 use std::fs::File;
 use sha2::{Sha256, Digest};
@@ -11,13 +11,14 @@ fn main() {
         return;
     }
     let arg = &args[1].to_lowercase();
-    if arg != "-s" && arg != "-c" && arg != "-h" {
+    if arg != "-s" && arg != "-c" && arg != "-h" && arg != "-w" {
         println!("Use hasher -h for help");
         return;
     }
     if &args[1] == "-h" {
         println!("Usage: hasher [switch] [filename] [sha256/sha256file/otherfile]");
         println!("-s prints the computed sha256 checksum");
+        println!("-w writes the computed sha256 checksum to a .sha256 file named after the input file");
         println!("-c compares the computed checksum to the [sha256] where you can input your own hash, a .sha256 file or another filename");
         println!("-c also tries to look after a .sha256 file if nothing is typed in the [sha256] section");
         return;
@@ -59,6 +60,24 @@ fn main() {
         println!("{}", lower_computed_hash.bright_green());
         return;
     }
+
+    if &args[1] == "-w" {
+        let mut file = match File::create(&sha256_file_name) {
+            Ok(file) => file,
+            Err(e) => {
+                eprintln!("Failed to create file '{}': {}", sha256_file_name.bright_red(), e);
+                return;
+            }
+        };
+        if let Err(e) = file.write_all(lower_computed_hash.as_bytes()) {
+            eprintln!("Failed to write to file '{}': {}", sha256_file_name.bright_red(), e);
+            return;
+        }
+
+        println!("File {} created and written to successfully.", sha256_file_name.bright_green());
+        
+    }
+
     if &args[1] == "-c" && args.len() == 4 && args[3].len() == 64 {
             let arg_hash = &args[3];
             let lower_arg_hash = arg_hash.to_lowercase();
