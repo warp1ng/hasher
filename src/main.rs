@@ -54,6 +54,7 @@ fn main() {
 
     let computed_hash = format!("{:x}", hasher.finalize());
     let lower_computed_hash = computed_hash.to_lowercase();
+    let lower_computed_hash_and_filename = computed_hash + " " + file_name;
     let sha256_file_name = format!("{}.sha256", file_name);
 
     if &args[1] == "-s" {
@@ -69,7 +70,7 @@ fn main() {
                 return;
             }
         };
-        if let Err(e) = file.write_all(lower_computed_hash.as_bytes()) {
+        if let Err(e) = file.write_all(lower_computed_hash_and_filename.as_bytes(),) {
             eprintln!("Failed to write to file '{}': {}", sha256_file_name.bright_red(), e);
             return;
         }
