@@ -91,7 +91,7 @@ fn main() {
                 println!("{}", "Checksums do not match!".bright_red());
             }
         }
-    if &args[1] == "-c" && args.len() > 3 && args[3].len() < 60 && !args[3].to_string().to_lowercase().contains(&sha256_file_name){
+    if &args[1] == "-c" && args.len() == 4 && args[3].len() < 60 && !args[3].as_str().to_lowercase().contains(&sha256_file_name.to_lowercase()) {
               let file_name2 = &args[3];
               let file2 = match File::open(file_name2) {
                   Ok(file2) => file2,
@@ -125,8 +125,7 @@ fn main() {
                   println!("{}", "Checksums do not match!".bright_red());
               }
           }
-        
-    if &args[1] == "-c" && args.len() == 4 && args[3].to_string().to_lowercase().contains(&sha256_file_name) {
+    if &args[1] == "-c" && args.len() == 4 && args[3].to_string().to_lowercase().contains("sha256") {
          if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
              let text: String = sha256_content;
              if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &file_name) {
@@ -140,8 +139,6 @@ fn main() {
                } else {
                    println!("{}", "Checksums do not match!".bright_red());
                }
-//           } else {
-//               println!("Failed to read the .sha256 file");
            }
          }
     }
