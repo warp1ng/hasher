@@ -129,7 +129,7 @@ fn main() {
     if &args[1] == "-c" && args.len() == 4 && args[3].to_string().to_lowercase().contains(&sha256_file_name) {
          if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
              let text: String = sha256_content;
-             if let Some(hash_from_external_file) = find_sha256_string(&text) {
+             if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &file_name) {
                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                let (colored_lower_computed_hash, colored_lower_hash_from_external_file) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
                println!("Hasher read directly from {}", sha256_file_name);
@@ -194,22 +194,15 @@ fn highlight_differences(a: &str, b: &str) -> (String, String) {
     (result_a, result_b)
 }
 
-fn find_sha256_string(text: &str) -> Option<&str> {
-    let mut index = 0;
-
-    while let Some(start) = text[index..].find(|c: char| c.is_ascii_hexdigit()) {
-        let start = index + start;
-        if start + 64 <= text.len() {
-            let found_str = &text[start..start + 64];
-            if found_str.chars().all(|c| c.is_ascii_hexdigit()) {
-                return Some(found_str);
-            } else {
-                index = start + 1;
+fn find_sha256_for_filename<'a>(text: &'a str, filename: &'a str) -> Option<&'a str> {
+    for line in text.lines() {
+        if line.contains(filename) {
+            for word in line.split_whitespace() {
+                if word.len() == 64 && word.chars().all(|c| c.is_ascii_hexdigit()) {
+                    return Some(word);
+                }
             }
-        } else {
-            break;
         }
     }
-
     None
 }
