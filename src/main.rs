@@ -60,31 +60,31 @@ fn main() {
     let computed_hash = format!("{:x}", hasher.finalize());
     let lower_computed_hash = computed_hash.to_lowercase();
     let lower_computed_hash_and_filename = computed_hash + " " + &file_name;
-    let sha256_file_name = format!("{}.sha256", file_name);
+    let sha256_file_name_for_write = format!("{}.sha256", file_name);
 
-    if &args[1] == "-s" {
+    if arg == "-s" {
         println!("{}", lower_computed_hash.bright_green());
         return;
     }
 
-    if &args[1] == "-w" {
-        let mut file = match File::create(&sha256_file_name) {
+    if arg == "-w" {
+        let mut file = match File::create(&sha256_file_name_for_write) {
             Ok(file) => file,
             Err(e) => {
-                eprintln!("Failed to create file '{}': {}", sha256_file_name.bright_red(), e);
+                eprintln!("Failed to create file '{}': {}", sha256_file_name_for_write.bright_red(), e);
                 return;
             }
         };
         if let Err(e) = file.write_all(lower_computed_hash_and_filename.as_bytes(),) {
-            eprintln!("Failed to write to file '{}': {}", sha256_file_name.bright_red(), e);
+            eprintln!("Failed to write to file '{}': {}", sha256_file_name_for_write.bright_red(), e);
             return;
         }
 
-        println!("File {} created and written to successfully.", sha256_file_name.bright_green());
+        println!("File {} created and written to successfully.", sha256_file_name_for_write.bright_green());
         
     }
 
-    if &args[1] == "-c" && args.len() == 4 && args[3].len() == 64 {
+    if arg == "-c" && args.len() == 4 && args[3].len() == 64 {
             let arg_hash = &args[3];
             let lower_arg_hash = arg_hash.to_lowercase();
             let (colored_lower_computed_hash, colored_lower_arg_hash) = highlight_differences(&lower_computed_hash, &lower_arg_hash);
@@ -97,7 +97,7 @@ fn main() {
             }
         }
 
-    if &args[1] == "-c" && args.len() == 4 && args[3].len() < 60 && !args[3].to_lowercase().ends_with(".sha256") {
+    if arg == "-c" && args.len() == 4 && args[3].len() < 60 && !args[3].to_lowercase().ends_with(".sha256") {
               let file_name2 = &args[3];
               let file2 = match File::open(file_name2) {
                   Ok(file2) => file2,
@@ -132,7 +132,13 @@ fn main() {
               }
           }
 
-    if &args[1] == "-c" && args.len() == 4 && args[3].to_lowercase().ends_with(".sha256") {
+    if arg == "-c" && args.len() == 4 && args[3].to_lowercase().ends_with(".sha256") {
+        let sha256_file_name = &args[3];
+        let processed_sha256_file_name = sha256_file_name
+         .trim()
+         .replace("./", "")
+         .replace(".\\", "");
+        let sha256_file_name = &processed_sha256_file_name.replace("\\", "/");
          if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
              let text: String = sha256_content;
              if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &file_name) {
