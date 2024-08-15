@@ -28,8 +28,13 @@ fn main() {
         return;
     }
 
-    let file_name = &args[2].trim().replace(".\\", "");
-    
+    let raw_file_name = &args[2].trim().replace("./", "");
+    let processed_arg = raw_file_name
+    .trim()
+    .replace("./", "")
+    .replace(".\\", "");
+    let file_name = &processed_arg.replace("\\", "/");
+
     let file = match File::open(file_name) {
         Ok(file) => file,
         Err(_) => {
@@ -54,7 +59,7 @@ fn main() {
 
     let computed_hash = format!("{:x}", hasher.finalize());
     let lower_computed_hash = computed_hash.to_lowercase();
-    let lower_computed_hash_and_filename = computed_hash + " " + file_name;
+    let lower_computed_hash_and_filename = computed_hash + " " + &file_name;
     let sha256_file_name = format!("{}.sha256", file_name);
 
     if &args[1] == "-s" {
@@ -91,7 +96,8 @@ fn main() {
                 println!("{}", "Checksums do not match!".bright_red());
             }
         }
-    if &args[1] == "-c" && args.len() > 3 && args[3].len() < 60 && !args[3].to_string().to_lowercase().contains(&sha256_file_name){
+
+    if &args[1] == "-c" && args.len() == 4 && args[3].len() < 60 && !args[3].to_lowercase().ends_with(".sha256") {
               let file_name2 = &args[3];
               let file2 = match File::open(file_name2) {
                   Ok(file2) => file2,
@@ -125,11 +131,11 @@ fn main() {
                   println!("{}", "Checksums do not match!".bright_red());
               }
           }
-        
-    if &args[1] == "-c" && args.len() == 4 && args[3].to_string().to_lowercase().contains(&sha256_file_name) {
+
+    if &args[1] == "-c" && args.len() == 4 && args[3].to_lowercase().ends_with(".sha256") {
          if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
              let text: String = sha256_content;
-             if let Some(hash_from_external_file) = find_sha256_string(&text) {
+             if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &file_name) {
                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                let (colored_lower_computed_hash, colored_lower_hash_from_external_file) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
                println!("Hasher read directly from {}", sha256_file_name);
@@ -140,8 +146,6 @@ fn main() {
                } else {
                    println!("{}", "Checksums do not match!".bright_red());
                }
-//           } else {
-//               println!("Failed to read the .sha256 file");
            }
          }
     }
@@ -194,22 +198,15 @@ fn highlight_differences(a: &str, b: &str) -> (String, String) {
     (result_a, result_b)
 }
 
-fn find_sha256_string(text: &str) -> Option<&str> {
-    let mut index = 0;
-
-    while let Some(start) = text[index..].find(|c: char| c.is_ascii_hexdigit()) {
-        let start = index + start;
-        if start + 64 <= text.len() {
-            let found_str = &text[start..start + 64];
-            if found_str.chars().all(|c| c.is_ascii_hexdigit()) {
-                return Some(found_str);
-            } else {
-                index = start + 1;
+fn find_sha256_for_filename<'a>(text: &'a str, filename: &'a str) -> Option<&'a str> {
+    for line in text.lines() {
+        if line.contains(filename) {
+            for word in line.split_whitespace() {
+                if word.len() == 64 && word.chars().all(|c| c.is_ascii_hexdigit()) {
+                    return Some(word);
+                }
             }
-        } else {
-            break;
         }
     }
-
     None
 }
