@@ -3,6 +3,8 @@ use std::env;
 use std::fs::File;
 use sha2::{Sha256, Digest};
 use colored::*;
+use spinoff::{Spinner, Color};
+use spinoff::spinners;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -35,6 +37,8 @@ fn main() {
     .replace(".\\", "");
     let file_name = &processed_arg.replace("\\", "/");
 
+    let mut spinner = Spinner::new(spinners::Line, "Loading file...", Color::White);
+
     let file = match File::open(file_name) {
         Ok(file) => file,
         Err(_) => {
@@ -42,6 +46,7 @@ fn main() {
             return;
         }
     };
+
     let mut reader = BufReader::new(file);
     let mut hasher = Sha256::new();
     let mut buffer = [0; 16384];
@@ -56,6 +61,7 @@ fn main() {
         };
         hasher.update(&buffer[..bytes_read]);
     }
+    spinner.clear();
 
     let computed_hash = format!("{:x}", hasher.finalize());
     let lower_computed_hash = computed_hash.to_lowercase();
@@ -109,6 +115,7 @@ fn main() {
               let mut reader2 = BufReader::new(file2);
               let mut hasher2 = Sha256::new();
               let mut buffer2 = [0; 16384];
+              let mut spinner = Spinner::new(spinners::Line, "Loading file...", Color::White);
               loop {
                   let bytes_read2 = match reader2.read(&mut buffer2) {
                       Ok(0) => break,
@@ -120,6 +127,8 @@ fn main() {
                   };
                   hasher2.update(&buffer2[..bytes_read2]);
               }
+              spinner.clear();
+
               let computed_hash2 = format!("{:x}", hasher2.finalize());
               let lower_computed_hash2 = computed_hash2.to_lowercase();
               let (colored_lower_computed_hash, colored_lower_computed_hash2) = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
