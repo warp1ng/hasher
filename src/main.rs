@@ -37,15 +37,15 @@ fn main() {
     .replace(".\\", "");
     let file_name = &processed_arg.replace("\\", "/");
 
-    let mut spinner = Spinner::new(spinners::Line, "Loading file...", Color::White);
-
     let file = match File::open(file_name) {
         Ok(file) => file,
         Err(_) => {
-            eprintln!("Failed to open the file {}", &file_name);
+            eprintln!("{} failed to open the file '{}'","Error:".red(), &file_name.bold().white());
             return;
         }
     };
+
+    let mut spinner = Spinner::new(spinners::Line, "Loading file...", Color::White);
 
     let mut reader = BufReader::new(file);
     let mut hasher = Sha256::new();
@@ -55,7 +55,7 @@ fn main() {
             Ok(0) => break,
             Ok(n) => n,
             Err(_) => {
-                eprintln!("Failed to read the file {}", &file_name);
+                eprintln!("{} failed to read the file '{}'","Error:".red(), &file_name.bold().white());
                 return;
             }
         };
@@ -69,7 +69,7 @@ fn main() {
     let sha256_file_name_for_write = format!("{}.sha256", file_name);
 
     if arg == "-s" {
-        println!("{}", lower_computed_hash.bright_green());
+        println!("{}", lower_computed_hash.truecolor(119,193,178));
         return;
     }
 
@@ -77,16 +77,16 @@ fn main() {
         let mut file = match File::create(&sha256_file_name_for_write) {
             Ok(file) => file,
             Err(e) => {
-                eprintln!("Failed to create file '{}': {}", sha256_file_name_for_write.bright_red(), e);
+                eprintln!("{} failed to create file '{}': {}","Error:".red(), sha256_file_name_for_write.white().bold(), e);
                 return;
             }
         };
         if let Err(e) = file.write_all(lower_computed_hash_and_filename.as_bytes(),) {
-            eprintln!("Failed to write to file '{}': {}", sha256_file_name_for_write.bright_red(), e);
+            eprintln!("{} failed to write to file '{}': {}","Error:".red(), sha256_file_name_for_write.white().bold(), e);
             return;
         }
 
-        println!("File {} created and written to successfully.", sha256_file_name_for_write.bright_green());
+        println!("File '{}' created and written to successfully", sha256_file_name_for_write.bold().white());
         
     }
 
@@ -97,9 +97,9 @@ fn main() {
             println!("{}", colored_lower_computed_hash);
             println!("{}", colored_lower_arg_hash);
             if lower_computed_hash == lower_arg_hash {
-                println!("{}", "Checksums match!".bright_green());
+                println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
             } else {
-                println!("{}", "Checksums do not match!".bright_red());
+                println!("{} {}","Status:".truecolor(241,196,15), "Checksums do not match!");
             }
         }
 
@@ -108,7 +108,7 @@ fn main() {
               let file2 = match File::open(file_name2) {
                   Ok(file2) => file2,
                   Err(_) => {
-                      eprintln!("Failed to open the second file {}", file_name2);
+                      eprintln!("{} failed to open the second file '{}'","Error:".red(), file_name2.bold().white());
                       return;
                   }
               };
@@ -121,7 +121,7 @@ fn main() {
                       Ok(0) => break,
                       Ok(n) => n,
                       Err(_) => {
-                          eprintln!("Failed to read the second file {}", file_name2);
+                          eprintln!("{} failed to read the second file '{}'","Error:".red(), file_name2.bold().white());
                           return;
                       }
                   };
@@ -135,9 +135,9 @@ fn main() {
               println!("{}", colored_lower_computed_hash);
               println!("{}", colored_lower_computed_hash2);
               if lower_computed_hash == lower_computed_hash2 {
-                  println!("{}", "Checksums match!".bright_green());
+                  println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
               } else {
-                  println!("{}", "Checksums do not match!".bright_red());
+                  println!("{} {}","Status:".truecolor(241,196,15), "Checksums do not match!");
               }
           }
 
@@ -153,13 +153,13 @@ fn main() {
              if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &file_name) {
                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                let (colored_lower_computed_hash, colored_lower_hash_from_external_file) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
-               println!("Hasher read directly from {}", sha256_file_name);
+               println!("{} hasher read directly from '{}' file ","Warning:".truecolor(241,196,15) ,sha256_file_name.bold().white());
                println!("{}", colored_lower_computed_hash);
                println!("{}", colored_lower_hash_from_external_file);
                if lower_hash_from_external_file == lower_computed_hash {
-                   println!("{}", "Checksums match!".bright_green());
+                   println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
                } else {
-                   println!("{}", "Checksums do not match!".bright_red());
+                   println!("{} {}","Status:".truecolor(241,196,15), "Checksums do not match!");
                }
            }
          }
@@ -169,17 +169,17 @@ fn read_sha256_file(file_name: &str) -> io::Result<String> {
     let file_metadata = std::fs::metadata(&file_name)?;
     const MAX_FILE_SIZE_BYTES: u64 = 100 * 1024 * 1024;
     if file_metadata.len() > MAX_FILE_SIZE_BYTES {
-        eprintln!("{} size exceeds 100MB", file_name);
+        eprintln!("{} '{}' file size exceeds 100MB","Error:".red(), file_name);
         return Ok(Default::default());
     }
     let mut sha256_file = File::open(file_name)?;
     let mut sha256_content = String::new();
     sha256_file.read_to_string(&mut sha256_content).map_err(|e| {
-        eprintln!("Failed to read {} file content: {}", file_name, e);
+        eprintln!("{} failed to read '{}' file content: {}","Error:".red(), file_name.bold().white(), e);
         e
     })?;
     if sha256_content.is_empty() {
-        eprintln!("{} file is empty", file_name);
+        eprintln!("'{}' file is empty", file_name);
         return Ok(Default::default());
     }
     Ok(sha256_content)
@@ -193,9 +193,9 @@ fn highlight_differences(a: &str, b: &str) -> (String, String) {
     let result_a: String = a_padded.chars().zip(b_padded.chars())
         .map(|(char_a, char_b)| {
             if char_a == char_b {
-                char_a.to_string().bright_green().to_string()
+                char_a.to_string().to_string()
             } else {
-                char_a.to_string().bright_red().to_string()
+                char_a.to_string().truecolor(241,196,15).to_string()
             }
         })
         .collect();
@@ -203,9 +203,9 @@ fn highlight_differences(a: &str, b: &str) -> (String, String) {
     let result_b: String = a_padded.chars().zip(b_padded.chars())
         .map(|(char_a, char_b)| {
             if char_a == char_b {
-                char_b.to_string().bright_green().to_string()
+                char_b.to_string().to_string()
             } else {
-                char_b.to_string().bright_red().to_string()
+                char_b.to_string().truecolor(241,196,15).to_string()
             }
         })
         .collect();
@@ -218,6 +218,12 @@ fn find_sha256_for_filename<'a>(text: &'a str, filename: &'a str) -> Option<&'a 
         if line.contains(filename) {
             for word in line.split_whitespace() {
                 if word.len() == 64 && word.chars().all(|c| c.is_ascii_hexdigit()) {
+                    return Some(word);
+                }
+            }
+        } else { // Spaghetti code
+            for word in line.split_whitespace() {
+                if word.len() == 64 {
                     return Some(word);
                 }
             }
