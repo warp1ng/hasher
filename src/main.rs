@@ -91,31 +91,35 @@ fn main() {
     }
 
     if arg == "-c" && args.len() == 4 && args[3].len() == 64 {
-            let arg_hash = &args[3];
-            let lower_arg_hash = arg_hash.to_lowercase();
-            let (colored_lower_computed_hash, colored_lower_arg_hash) = highlight_differences(&lower_computed_hash, &lower_arg_hash);
-            println!("{}", colored_lower_computed_hash);
-            println!("{}", colored_lower_arg_hash);
+        let arg_hash = &args[3];
+        let lower_arg_hash = arg_hash.to_lowercase();
+        let (colored_lower_computed_hash, colored_lower_arg_hash, squiggles) = highlight_differences(&lower_computed_hash, &lower_arg_hash);
+        // The colored vars no longer do anything. I now understand the jokes about legacy code.
+        println!("{}", colored_lower_computed_hash);
+        if squiggles.contains('~') {
+            println!("{}", squiggles.truecolor(173,127,172));
+        }
+        println!("{}", colored_lower_arg_hash);
             if lower_computed_hash == lower_arg_hash {
                 println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
             } else {
-                println!("{} {}","Status:".truecolor(241,196,15), "Checksums do not match!");
+                println!("{} {}","Status:".truecolor(119,193,178), "Checksums do not match!");
             }
         }
 
     if arg == "-c" && args.len() == 4 && args[3].len() < 60 && !args[3].to_lowercase().ends_with(".sha256") {
-              let file_name2 = &args[3];
-              let file2 = match File::open(file_name2) {
+        let file_name2 = &args[3];
+        let file2 = match File::open(file_name2) {
                   Ok(file2) => file2,
                   Err(_) => {
                       eprintln!("{} failed to open the second file '{}'","Error:".red(), file_name2.bold().white());
                       return;
                   }
               };
-              let mut reader2 = BufReader::new(file2);
-              let mut hasher2 = Sha256::new();
-              let mut buffer2 = [0; 16384];
-              let mut spinner = Spinner::new(spinners::Line, "Loading file...", Color::White);
+        let mut reader2 = BufReader::new(file2);
+        let mut hasher2 = Sha256::new();
+        let mut buffer2 = [0; 16384];
+        let mut spinner = Spinner::new(spinners::Line, "Loading file...", Color::White);
               loop {
                   let bytes_read2 = match reader2.read(&mut buffer2) {
                       Ok(0) => break,
@@ -129,17 +133,20 @@ fn main() {
               }
               spinner.clear();
 
-              let computed_hash2 = format!("{:x}", hasher2.finalize());
-              let lower_computed_hash2 = computed_hash2.to_lowercase();
-              let (colored_lower_computed_hash, colored_lower_computed_hash2) = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
-              println!("{}", colored_lower_computed_hash);
-              println!("{}", colored_lower_computed_hash2);
-              if lower_computed_hash == lower_computed_hash2 {
-                  println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
-              } else {
-                  println!("{} {}","Status:".truecolor(241,196,15), "Checksums do not match!");
-              }
-          }
+        let computed_hash2 = format!("{:x}", hasher2.finalize());
+        let lower_computed_hash2 = computed_hash2.to_lowercase();
+        let (colored_lower_computed_hash, colored_lower_computed_hash2, squiggles) = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
+        println!("{}", colored_lower_computed_hash);
+        if squiggles.contains('~') {
+            println!("{}", squiggles.truecolor(173,127,172));
+        }
+        println!("{}", colored_lower_computed_hash2);
+        if lower_computed_hash == lower_computed_hash2 {
+            println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
+        } else {
+            println!("{} {}","Status:".truecolor(119,193,178), "Checksums do not match!");
+        }
+    }
 
     if arg == "-c" && args.len() == 4 && args[3].to_lowercase().ends_with(".sha256") {
         let sha256_file_name = &args[3];
@@ -152,14 +159,18 @@ fn main() {
              let text: String = sha256_content;
              if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &file_name) {
                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-               let (colored_lower_computed_hash, colored_lower_hash_from_external_file) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
-               println!("{} hasher read directly from '{}' file ","Warning:".truecolor(241,196,15) ,sha256_file_name.bold().white());
+               let (colored_lower_computed_hash, colored_lower_hash_from_external_file, squiggles) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
+               println!("{} hasher read directly from file '{}'","Warning:".truecolor(119,193,178), sha256_file_name.bold().white());
                println!("{}", colored_lower_computed_hash);
+                 if squiggles.contains('~') {
+                     println!("{}", squiggles.truecolor(173,127,172));
+                 }
                println!("{}", colored_lower_hash_from_external_file);
+
                if lower_hash_from_external_file == lower_computed_hash {
                    println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
                } else {
-                   println!("{} {}","Status:".truecolor(241,196,15), "Checksums do not match!");
+                   println!("{} {}","Status:".truecolor(119,193,178), "Checksums do not match!");
                }
            }
          }
@@ -169,7 +180,7 @@ fn read_sha256_file(file_name: &str) -> io::Result<String> {
     let file_metadata = std::fs::metadata(&file_name)?;
     const MAX_FILE_SIZE_BYTES: u64 = 100 * 1024 * 1024;
     if file_metadata.len() > MAX_FILE_SIZE_BYTES {
-        eprintln!("{} '{}' file size exceeds 100MB","Error:".red(), file_name);
+        eprintln!("{} File '{}' size exceeds 100MB","Error:".red(), file_name);
         return Ok(Default::default());
     }
     let mut sha256_file = File::open(file_name)?;
@@ -185,33 +196,30 @@ fn read_sha256_file(file_name: &str) -> io::Result<String> {
     Ok(sha256_content)
 }
 
-fn highlight_differences(a: &str, b: &str) -> (String, String) {
+fn highlight_differences(a: &str, b: &str) -> (String, String, String) {
     let max_len = std::cmp::max(a.len(), b.len());
+    
     let a_padded = format!("{:width$}", a, width = max_len);
     let b_padded = format!("{:width$}", b, width = max_len);
+    
+    let mut result_a = String::new();
+    let mut result_b = String::new();
+    let mut squiggles = String::new();
+    
+    for (char_a, char_b) in a_padded.chars().zip(b_padded.chars()) {
+        result_a.push(char_a);
+        result_b.push(char_b);
 
-    let result_a: String = a_padded.chars().zip(b_padded.chars())
-        .map(|(char_a, char_b)| {
-            if char_a == char_b {
-                char_a.to_string().to_string()
-            } else {
-                char_a.to_string().truecolor(241,196,15).to_string()
-            }
-        })
-        .collect();
+        if char_a == char_b {
+            squiggles.push(' ');
+        } else {
+            squiggles.push('~');
+        }
+    }
 
-    let result_b: String = a_padded.chars().zip(b_padded.chars())
-        .map(|(char_a, char_b)| {
-            if char_a == char_b {
-                char_b.to_string().to_string()
-            } else {
-                char_b.to_string().truecolor(241,196,15).to_string()
-            }
-        })
-        .collect();
-
-    (result_a, result_b)
+    (result_a, result_b, squiggles)
 }
+
 
 fn find_sha256_for_filename<'a>(text: &'a str, filename: &'a str) -> Option<&'a str> {
     for line in text.lines() {
