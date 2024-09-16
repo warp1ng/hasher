@@ -86,7 +86,7 @@ fn main() {
             return;
         }
 
-        println!("File '{}' created and written to successfully", sha256_file_name_for_write.bold().white());
+        println!("{} file '{}' created and written to successfully", "Status:".truecolor(119,193,178), sha256_file_name_for_write.bold().white());
         
     }
 
@@ -96,7 +96,7 @@ fn main() {
         let (colored_lower_computed_hash, colored_lower_arg_hash, squiggles) = highlight_differences(&lower_computed_hash, &lower_arg_hash);
         // The colored vars no longer do anything. I now understand the jokes about legacy code.
         println!("{}", colored_lower_computed_hash);
-        if squiggles.contains('~') {
+        if squiggles.contains('^') {
             println!("{}", squiggles.truecolor(173,127,172));
         }
         println!("{}", colored_lower_arg_hash);
@@ -107,7 +107,7 @@ fn main() {
             }
         }
 
-    if arg == "-c" && args.len() == 4 && args[3].len() < 60 && !args[3].to_lowercase().ends_with(".sha256") {
+    if arg == "-c" && args.len() == 4 && args[3].len() < 60 && !args[3].to_lowercase().contains(".sha256") {
         let file_name2 = &args[3];
         let file2 = match File::open(file_name2) {
                   Ok(file2) => file2,
@@ -137,7 +137,7 @@ fn main() {
         let lower_computed_hash2 = computed_hash2.to_lowercase();
         let (colored_lower_computed_hash, colored_lower_computed_hash2, squiggles) = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
         println!("{}", colored_lower_computed_hash);
-        if squiggles.contains('~') {
+        if squiggles.contains('^') {
             println!("{}", squiggles.truecolor(173,127,172));
         }
         println!("{}", colored_lower_computed_hash2);
@@ -162,7 +162,7 @@ fn main() {
                let (colored_lower_computed_hash, colored_lower_hash_from_external_file, squiggles) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
                println!("{} hasher read directly from file '{}'","Warning:".truecolor(119,193,178), sha256_file_name.bold().white());
                println!("{}", colored_lower_computed_hash);
-                 if squiggles.contains('~') {
+                 if squiggles.contains('^') {
                      println!("{}", squiggles.truecolor(173,127,172));
                  }
                println!("{}", colored_lower_hash_from_external_file);
@@ -190,7 +190,7 @@ fn read_sha256_file(file_name: &str) -> io::Result<String> {
         e
     })?;
     if sha256_content.is_empty() {
-        eprintln!("'{}' file is empty", file_name);
+        eprintln!("{} file '{}' is empty", "Error:".red(), file_name);
         return Ok(Default::default());
     }
     Ok(sha256_content)
@@ -213,7 +213,7 @@ fn highlight_differences(a: &str, b: &str) -> (String, String, String) {
         if char_a == char_b {
             squiggles.push(' ');
         } else {
-            squiggles.push('~');
+            squiggles.push('^');
         }
     }
 
@@ -226,12 +226,6 @@ fn find_sha256_for_filename<'a>(text: &'a str, filename: &'a str) -> Option<&'a 
         if line.contains(filename) {
             for word in line.split_whitespace() {
                 if word.len() == 64 && word.chars().all(|c| c.is_ascii_hexdigit()) {
-                    return Some(word);
-                }
-            }
-        } else { // Spaghetti code
-            for word in line.split_whitespace() {
-                if word.len() == 64 {
                     return Some(word);
                 }
             }
