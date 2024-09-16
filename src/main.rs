@@ -61,7 +61,6 @@ fn main() {
         };
         hasher.update(&buffer[..bytes_read]);
     }
-    spinner.clear();
 
     let computed_hash = format!("{:x}", hasher.finalize());
     let lower_computed_hash = computed_hash.to_lowercase();
@@ -69,6 +68,7 @@ fn main() {
     let sha256_file_name_for_write = format!("{}.sha256", file_name);
 
     if arg == "-s" {
+        spinner.clear();
         println!("{}", lower_computed_hash.truecolor(119,193,178));
         return;
     }
@@ -131,11 +131,12 @@ fn main() {
                   };
                   hasher2.update(&buffer2[..bytes_read2]);
               }
-              spinner.clear();
+              
 
         let computed_hash2 = format!("{:x}", hasher2.finalize());
         let lower_computed_hash2 = computed_hash2.to_lowercase();
         let (colored_lower_computed_hash, colored_lower_computed_hash2, squiggles) = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
+        spinner.clear();
         println!("{}", colored_lower_computed_hash);
         if squiggles.contains('^') {
             println!("{}", squiggles.truecolor(173,127,172));
@@ -155,6 +156,7 @@ fn main() {
          .replace("./", "")
          .replace(".\\", "");
         let sha256_file_name = &processed_sha256_file_name.replace("\\", "/");
+        spinner.clear();
          if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
              let text: String = sha256_content;
              if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &file_name) {
@@ -225,7 +227,7 @@ fn find_sha256_for_filename<'a>(text: &'a str, filename: &'a str) -> Option<&'a 
     for line in text.lines() {
         if line.contains(filename) {
             for word in line.split_whitespace() {
-                if word.len() == 64 && word.chars().all(|c| c.is_ascii_hexdigit()) {
+                if word.len() == 64 && word.chars().all(|c| c.is_alphanumeric()) {
                     return Some(word);
                 }
             }
