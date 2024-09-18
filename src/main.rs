@@ -3,8 +3,8 @@ use std::env;
 use std::fs::File;
 use sha2::{Sha256, Digest};
 use colored::*;
-use spinoff::{Spinner, Color};
-use spinoff::spinners;
+use colored::control;
+use spinoff::{Spinner, spinners, Color, Streams};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -30,6 +30,8 @@ fn main() {
         return;
     }
 
+    control::set_virtual_terminal(true).unwrap();
+
     let raw_file_name = &args[2].trim().replace("./", "");
     let processed_arg = raw_file_name
     .trim()
@@ -39,50 +41,57 @@ fn main() {
     let file = match File::open(file_name) {
         Ok(file) => file,
         Err(_) => {
-            eprintln!("{} failed to open the file '{}'","Error:".red(), &file_name.bold().white());
+            eprintln!("{} failed to open the file '{}'","Error:".truecolor(173,127,172), &file_name.bold().white());
             return;
         }
     };
-    let mut spinner = Spinner::new(spinners::Line, "Loading file...", Color::White);
+
+    let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+
     let mut reader = BufReader::new(file);
     let mut hasher = Sha256::new();
-    let mut buffer = [0; 16384];
+    let mut buffer = [0; 65536];
     loop {
         let bytes_read = match reader.read(&mut buffer) {
             Ok(0) => break,
             Ok(n) => n,
             Err(_) => {
-                eprintln!("{} failed to read the file '{}'","Error:".red(), &file_name.bold().white());
+                spinner.clear();
+                std::io::stdout().flush().unwrap();
+                eprintln!("{} failed to read the file '{}'","Error:".truecolor(173,127,172), &file_name.bold().white());
                 return;
             }
         };
         hasher.update(&buffer[..bytes_read]);
     }
-    spinner.clear();
-    
+
     let computed_hash = format!("{:x}", hasher.finalize());
     let lower_computed_hash = computed_hash.to_lowercase();
     let lower_computed_hash_and_filename = computed_hash + " " + &file_name;
     let sha256_file_name_for_write = format!("{}.sha256", file_name);
 
     if arg == "-s" {
+        spinner.clear();
+        std::io::stdout().flush().unwrap();
         println!("{}", lower_computed_hash.truecolor(119,193,178));
         return;
     }
+
+    spinner.clear();
+    std::io::stdout().flush().unwrap();
 
     if arg == "-w" {
         let mut file = match File::create(&sha256_file_name_for_write) {
             Ok(file) => file,
             Err(e) => {
-                eprintln!("{} failed to create file '{}': {}","Error:".red(), sha256_file_name_for_write.white().bold(), e);
+                eprintln!("{} failed to create file '{}': {}","Error:".truecolor(173,127,172), sha256_file_name_for_write.white().bold(), e);
                 return;
             }
         };
         if let Err(e) = file.write_all(lower_computed_hash_and_filename.as_bytes(),) {
-            eprintln!("{} failed to write to file '{}': {}","Error:".red(), sha256_file_name_for_write.white().bold(), e);
+            eprintln!("{} failed to write to file '{}': {}","Error:".truecolor(173,127,172), sha256_file_name_for_write.white().bold(), e);
             return;
         }
-
         println!("{} file '{}' created and written to successfully", "Status:".truecolor(119,193,178), sha256_file_name_for_write.bold().white());
         
     }
@@ -109,26 +118,32 @@ fn main() {
         let file2 = match File::open(file_name2) {
                   Ok(file2) => file2,
                   Err(_) => {
-                      eprintln!("{} failed to open the second file '{}'","Error:".red(), file_name2.bold().white());
+                      eprintln!("{} failed to open the second file '{}'","Error:".truecolor(173,127,172), file_name2.bold().white());
                       return;
                   }
               };
         let mut reader2 = BufReader::new(file2);
         let mut hasher2 = Sha256::new();
-        let mut buffer2 = [0; 16384];
-        let mut spinner = Spinner::new(spinners::Line, "Loading file...", Color::White);
+        let mut buffer2 = [0; 65536];
+
+        let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+
               loop {
                   let bytes_read2 = match reader2.read(&mut buffer2) {
                       Ok(0) => break,
                       Ok(n) => n,
                       Err(_) => {
-                          eprintln!("{} failed to read the second file '{}'","Error:".red(), file_name2.bold().white());
+                          spinner.clear();
+                          std::io::stdout().flush().unwrap();
+                          eprintln!("{} failed to read the second file '{}'","Error:".truecolor(173,127,172), file_name2.bold().white());
                           return;
                       }
                   };
                   hasher2.update(&buffer2[..bytes_read2]);
               }
+
         spinner.clear();
+        std::io::stdout().flush().unwrap();
 
         let computed_hash2 = format!("{:x}", hasher2.finalize());
         let lower_computed_hash2 = computed_hash2.to_lowercase();
@@ -145,20 +160,18 @@ fn main() {
         }
     }
 
-    if arg == "-c" && args.len() == 4 && args[3].to_lowercase().ends_with(".sha256") {
+    if arg == "-c" && args.len() == 4 && args[3].to_lowercase().contains(".sha256") {
         let sha256_file_name = &args[3];
         let processed_sha256_file_name = sha256_file_name
          .trim()
          .replace("./", "")
          .replace(".\\", "");
         let sha256_file_name = &processed_sha256_file_name.replace("\\", "/");
-        let mut spinner = Spinner::new(spinners::Line, "Loading file...", Color::White);
          if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
              let text: String = sha256_content;
              if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &file_name) {
                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                let (colored_lower_computed_hash, colored_lower_hash_from_external_file, squiggles) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
-               spinner.clear();
                println!("{} hasher read directly from file '{}'","Warning:".truecolor(119,193,178), sha256_file_name.bold().white());
                println!("{}", colored_lower_computed_hash);
                  if squiggles.contains('^') {
@@ -172,29 +185,43 @@ fn main() {
                    println!("{} {}","Status:".truecolor(119,193,178), "Checksums do not match!");
                }
            }
-         } else {
-             eprintln!("{} failed to open the file '{}'","Error:".red(), &sha256_file_name.bold().white());
-             return;
          }
     }
 }
 fn read_sha256_file(file_name: &str) -> io::Result<String> {
-    let file_metadata = std::fs::metadata(&file_name)?;
+    let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+    let file_metadata = match std::fs::metadata(&file_name) {
+        Ok(metadata) => metadata,
+        Err(e) => {
+            spinner.clear();
+            std::io::stdout().flush().unwrap();
+            eprintln!("{} failed to open the file '{}'","Error:".truecolor(173,127,172), &file_name.bold().white());
+            return Err(e);
+        }
+    };
     const MAX_FILE_SIZE_BYTES: u64 = 100 * 1024 * 1024;
     if file_metadata.len() > MAX_FILE_SIZE_BYTES {
-        eprintln!("{} File '{}' size exceeds 100MB","Error:".red(), file_name);
+        spinner.clear();
+        std::io::stdout().flush().unwrap();
+        eprintln!("{} File '{}' size exceeds 100MB","Error:".truecolor(173,127,172), file_name);
         return Ok(Default::default());
     }
     let mut sha256_file = File::open(file_name)?;
     let mut sha256_content = String::new();
     sha256_file.read_to_string(&mut sha256_content).map_err(|e| {
-        eprintln!("{} failed to read '{}' file content: {}","Error:".red(), file_name.bold().white(), e);
+        spinner.clear();
+        std::io::stdout().flush().unwrap();
+        eprintln!("{} failed to read '{}' file content: {}","Error:".truecolor(173,127,172), file_name.bold().white(), e);
         e
     })?;
     if sha256_content.is_empty() {
-        eprintln!("{} file '{}' is empty", "Error:".red(), file_name);
+        spinner.clear();
+        std::io::stdout().flush().unwrap();
+        eprintln!("{} file '{}' is empty", "Error:".truecolor(173,127,172), file_name);
         return Ok(Default::default());
     }
+    spinner.clear();
+    std::io::stdout().flush().unwrap();
     Ok(sha256_content)
 }
 
