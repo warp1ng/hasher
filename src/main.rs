@@ -60,8 +60,7 @@ fn main() {
             Ok(0) => break,
             Ok(n) => n,
             Err(_) => {
-                spinner.clear();
-                std::io::stdout().flush().unwrap();
+                clear_spinner_and_flush(&mut spinner);
                 eprintln!("{} failed to read the file '{}'","Error:".truecolor(173,127,172), &file_name.bold().white());
                 return;
             }
@@ -75,14 +74,12 @@ fn main() {
     let sha256_file_name_for_write = format!("{}.sha256", file_name);
 
     if arg == "-s" {
-        spinner.clear();
-        std::io::stdout().flush().unwrap();
+        clear_spinner_and_flush(&mut spinner);
         println!("{}", lower_computed_hash.truecolor(119,193,178));
         return;
     }
 
-    spinner.clear();
-    std::io::stdout().flush().unwrap();
+    clear_spinner_and_flush(&mut spinner);
 
     if arg == "-w" {
         let mut file = match File::create(&sha256_file_name_for_write) {
@@ -137,8 +134,7 @@ fn main() {
                       Ok(0) => break,
                       Ok(n) => n,
                       Err(_) => {
-                          spinner.clear();
-                          std::io::stdout().flush().unwrap();
+                          clear_spinner_and_flush(&mut spinner);
                           eprintln!("{} failed to read the second file '{}'","Error:".truecolor(173,127,172), file_name2.bold().white());
                           return;
                       }
@@ -146,8 +142,7 @@ fn main() {
                   hasher2.update(&buffer2[..bytes_read2]);
               }
 
-        spinner.clear();
-        std::io::stdout().flush().unwrap();
+        clear_spinner_and_flush(&mut spinner);
 
         let computed_hash2 = format!("{:x}", hasher2.finalize());
         let lower_computed_hash2 = computed_hash2.to_lowercase();
@@ -192,40 +187,36 @@ fn main() {
          }
     }
 }
+
 fn read_sha256_file(file_name: &str) -> io::Result<String> {
     let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
     let file_metadata = match std::fs::metadata(&file_name) {
         Ok(metadata) => metadata,
         Err(e) => {
-            spinner.clear();
-            std::io::stdout().flush().unwrap();
+            clear_spinner_and_flush(&mut spinner);
             eprintln!("{} failed to open the file '{}'","Error:".truecolor(173,127,172), &file_name.bold().white());
             return Err(e);
         }
     };
     const MAX_FILE_SIZE_BYTES: u64 = 100 * 1024 * 1024;
     if file_metadata.len() > MAX_FILE_SIZE_BYTES {
-        spinner.clear();
-        std::io::stdout().flush().unwrap();
+        clear_spinner_and_flush(&mut spinner);
         eprintln!("{} File '{}' size exceeds 100MB","Error:".truecolor(173,127,172), file_name);
         return Ok(Default::default());
     }
     let mut sha256_file = File::open(file_name)?;
     let mut sha256_content = String::new();
     sha256_file.read_to_string(&mut sha256_content).map_err(|e| {
-        spinner.clear();
-        std::io::stdout().flush().unwrap();
+        clear_spinner_and_flush(&mut spinner);
         eprintln!("{} failed to read '{}' file content: {}","Error:".truecolor(173,127,172), file_name.bold().white(), e);
         e
     })?;
     if sha256_content.is_empty() {
-        spinner.clear();
-        std::io::stdout().flush().unwrap();
+        clear_spinner_and_flush(&mut spinner);
         eprintln!("{} file '{}' is empty", "Error:".truecolor(173,127,172), file_name);
         return Ok(Default::default());
     }
-    spinner.clear();
-    std::io::stdout().flush().unwrap();
+    clear_spinner_and_flush(&mut spinner);
     Ok(sha256_content)
 }
 
@@ -248,7 +239,6 @@ fn highlight_differences(a: &str, b: &str) -> String {
     squiggles
 }
 
-
 fn find_sha256_for_filename<'a>(text: &'a str, filename: &'a str) -> Option<&'a str> {
     for line in text.lines() {
         if line.contains(filename) {
@@ -260,4 +250,9 @@ fn find_sha256_for_filename<'a>(text: &'a str, filename: &'a str) -> Option<&'a 
         }
     }
     None
+}
+
+fn clear_spinner_and_flush(spinner: &mut Spinner) {
+    spinner.clear();
+    io::stdout().flush().unwrap();
 }
