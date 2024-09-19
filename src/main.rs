@@ -29,6 +29,10 @@ fn main() {
         println!("Use hasher -h for help");
         return;
     }
+    
+    if args.len() == 3 && arg == "-c" {
+        println!("{} '-c' switch requires two files", "Error:".truecolor(173,127,172))
+    }
 
     control::set_virtual_terminal(true).unwrap();
 
@@ -99,13 +103,13 @@ fn main() {
     if arg == "-c" && args.len() == 4 && args[3].len() == 64 {
         let arg_hash = &args[3];
         let lower_arg_hash = arg_hash.to_lowercase();
-        let (colored_lower_computed_hash, colored_lower_arg_hash, squiggles) = highlight_differences(&lower_computed_hash, &lower_arg_hash);
+        let squiggles = highlight_differences(&lower_computed_hash, &lower_arg_hash);
         // The colored vars no longer do anything. I now understand the jokes about legacy code.
-        println!("{}", colored_lower_computed_hash);
+        println!("{}", lower_computed_hash);
         if squiggles.contains('^') {
             println!("{}", squiggles);
         }
-        println!("{}", colored_lower_arg_hash);
+        println!("{}", lower_arg_hash);
             if lower_computed_hash == lower_arg_hash {
                 println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
             } else {
@@ -147,19 +151,19 @@ fn main() {
 
         let computed_hash2 = format!("{:x}", hasher2.finalize());
         let lower_computed_hash2 = computed_hash2.to_lowercase();
-        let (colored_lower_computed_hash, colored_lower_computed_hash2, squiggles) = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
-        println!("{}", colored_lower_computed_hash);
+        let squiggles = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
+        println!("{}", lower_computed_hash);
         if squiggles.contains('^') {
             println!("{}", squiggles);
         }
-        println!("{}", colored_lower_computed_hash2);
+        println!("{}", lower_computed_hash2);
         if lower_computed_hash == lower_computed_hash2 {
             println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
         } else {
             println!("{} {}","Status:".truecolor(119,193,178), "Checksums do not match!");
         }
     }
-
+    
     if arg == "-c" && args.len() == 4 && args[3].to_lowercase().contains(".sha256") {
         let sha256_file_name = &args[3];
         let processed_sha256_file_name = sha256_file_name
@@ -171,13 +175,13 @@ fn main() {
              let text: String = sha256_content;
              if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &file_name) {
                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-               let (colored_lower_computed_hash, colored_lower_hash_from_external_file, squiggles) = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
+               let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
                println!("{} hasher read directly from file '{}'","Warning:".truecolor(119,193,178), sha256_file_name.bold().white());
-               println!("{}", colored_lower_computed_hash);
+               println!("{}", lower_computed_hash);
                  if squiggles.contains('^') {
                      println!("{}", squiggles);
                  }
-               println!("{}", colored_lower_hash_from_external_file);
+               println!("{}", lower_hash_from_external_file);
 
                if lower_hash_from_external_file == lower_computed_hash {
                    println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
@@ -225,29 +229,23 @@ fn read_sha256_file(file_name: &str) -> io::Result<String> {
     Ok(sha256_content)
 }
 
-fn highlight_differences(a: &str, b: &str) -> (String, String, String) {
+fn highlight_differences(a: &str, b: &str) -> String {
     let max_len = std::cmp::max(a.len(), b.len());
 
     let a_padded = format!("{:width$}", a, width = max_len);
     let b_padded = format!("{:width$}", b, width = max_len);
-
-    let mut result_a = String::new();
-    let mut result_b = String::new();
+    
     let mut squiggles = String::new();
 
     for (char_a, char_b) in a_padded.chars().zip(b_padded.chars()) {
         if char_a == char_b {
-            result_a.push_str(&char_a.to_string().to_string());
-            result_b.push_str(&char_b.to_string().to_string());
             squiggles.push_str(&"|".truecolor(119,193,178).to_string());
         } else {
-            result_a.push_str(&char_a.to_string().to_string());
-            result_b.push_str(&char_b.to_string().to_string());
             squiggles.push_str(&"^".truecolor(173,127,172).to_string());
         }
     }
 
-    (result_a, result_b, squiggles)
+    squiggles
 }
 
 
