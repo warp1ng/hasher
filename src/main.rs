@@ -3,7 +3,6 @@ use std::env;
 use std::fs::File;
 use sha2::{Sha256, Digest};
 use colored::*;
-use colored::control;
 use spinoff::{Spinner, spinners, Color, Streams};
 
 fn main() {
@@ -33,8 +32,6 @@ fn main() {
     if args.len() == 3 && arg == "-c" {
         println!("{} '-c' switch requires two files", "Error:".truecolor(173,127,172))
     }
-
-    control::set_virtual_terminal(true).unwrap();
 
     let raw_file_name = &args[2].trim().replace("./", "");
     let processed_arg = raw_file_name
