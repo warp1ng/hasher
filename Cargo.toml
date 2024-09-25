@@ -9,3 +9,4 @@ edition = "2021"
 sha2 = "0.10.8"
 colored = "2.1.0"
 spinoff = { version = "0.8.0", features = ["line", "balloon2"] }
+walkdir = "2.5.0"

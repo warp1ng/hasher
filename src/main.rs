@@ -4,6 +4,9 @@ use std::fs::File;
 use sha2::{Sha256, Digest};
 use colored::*;
 use spinoff::{Spinner, spinners, Color, Streams};
+use std::path::{PathBuf};
+use walkdir::WalkDir;
+use std::path::Path;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -11,17 +14,19 @@ fn main() {
         println!("Use hasher -h for help");
         return;
     }
+
     let arg = &args[1].to_lowercase();
-    if arg != "-s" && arg != "-c" && arg != "-h" && arg != "-w" {
+
+    if arg != "-s" && arg != "-c" && arg != "-h" && arg != "-w" && arg != "-wr" {
         println!("Use hasher -h for help");
         return;
     }
     if &args[1] == "-h" {
-        println!("Usage: hasher [switch] [filename] [sha256/sha256file/otherfile]");
+        println!("Usage: hasher [switch] [filename/directory] [input]");
         println!("-s prints the computed sha256 checksum");
         println!("-w writes the computed sha256 checksum to a .sha256 file named after the input file");
-        println!("-c compares the computed checksum to the [sha256] where you can input your own hash, a .sha256 file or another filename");
-        println!("-c also tries to look after a .sha256 file if nothing is typed in the [sha256] section");
+        println!("-wr does the same thing as '-w' but for an entire directory");
+        println!("-c compares a file's checksum against your [input], which can be a 64 char hash, a sha256 file or just another file");
         return;
     }
     if args.len() < 3 {
@@ -30,75 +35,77 @@ fn main() {
     }
     
     if args.len() == 3 && arg == "-c" {
-        println!("{} '-c' switch requires two files", "Error:".truecolor(173,127,172))
+        println!("{} '-c' switch requires two files", "Error:".truecolor(173,127,172));
+        return;
     }
 
-    let raw_file_name = &args[2].trim().replace("./", "");
-    let processed_arg = raw_file_name
-    .trim()
-    .replace("./", "")
-    .replace(".\\", "");
-    let file_name = &processed_arg.replace("\\", "/");
-    let file = match File::open(file_name) {
-        Ok(file) => file,
-        Err(_) => {
-            eprintln!("{} failed to open the file '{}'","Error:".truecolor(173,127,172), &file_name.bold().white());
-            return;
-        }
-    };
+    let dir = PathBuf::from(&args[2]);
 
-    let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+    if arg == "-wr" && !dir.is_dir() {
+        println!("{} '-wr' switch requires a directory", "Error:".truecolor(173,127,172));
+        return;
+    }
 
-    let mut reader = BufReader::new(file);
-    let mut hasher = Sha256::new();
-    let mut buffer = [0; 65536];
-    loop {
-        let bytes_read = match reader.read(&mut buffer) {
-            Ok(0) => break,
-            Ok(n) => n,
-            Err(_) => {
-                clear_spinner_and_flush(&mut spinner);
-                eprintln!("{} failed to read the file '{}'","Error:".truecolor(173,127,172), &file_name.bold().white());
+    if arg == "-wr" && dir.is_dir() {
+        let dir_name = dir.file_name().unwrap().to_str().unwrap();
+        let checksums_file_name = format!("{}.sha256", dir_name);
+        let output_file = dir.join(&checksums_file_name);
+        let mut checksums_file = match File::create(&output_file) {
+            Ok(file) => file,
+            Err(e) => {
+                eprintln!("{} failed to create file '{}': {}","Error:".truecolor(173,127,172), dir_name.white().bold(), e);
                 return;
             }
         };
-        hasher.update(&buffer[..bytes_read]);
+        let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+        for entry in WalkDir::new(dir.clone()).into_iter().filter_map(Result::ok) {
+            let path = entry.path();
+            if path.is_file() {
+                let result = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name);
+                let relative_path = strip_prefix(path, &dir);
+                let text_to_write = format!("{} {}", result, relative_path.display());
+                writeln!(checksums_file, "{}", text_to_write).unwrap();
+            }
+        }
+        clear_spinner_and_flush(&mut spinner);
+        println!("{} file '{}' created and written to successfully", "Status:".truecolor(119,193,178), checksums_file_name.bold().white());
+        return;
     }
 
-    let computed_hash = format!("{:x}", hasher.finalize());
+    let raw_first_file_path = PathBuf::from(&args[2]);
+    let first_filename = raw_first_file_path.file_name().unwrap().to_str().unwrap();
+    let computed_hash = compute_sha256_for_file(&raw_first_file_path, first_filename);
     let lower_computed_hash = computed_hash.to_lowercase();
-    let lower_computed_hash_and_filename = computed_hash + " " + &file_name;
-    let sha256_file_name_for_write = format!("{}.sha256", file_name);
+    let lower_computed_hash_and_filename = computed_hash + " " + &first_filename;
+    let checksum_file_name = format!("{}.sha256", first_filename);
 
     if arg == "-s" {
-        clear_spinner_and_flush(&mut spinner);
         println!("{}", lower_computed_hash.truecolor(119,193,178));
         return;
     }
 
-    clear_spinner_and_flush(&mut spinner);
-
     if arg == "-w" {
-        let mut file = match File::create(&sha256_file_name_for_write) {
+        let sha256_file_name_raw = format!("{}.sha256", raw_first_file_path.to_str().unwrap());
+        println!("{}", sha256_file_name_raw);
+        let mut checksum_file = match File::create(&sha256_file_name_raw) {
             Ok(file) => file,
             Err(e) => {
-                eprintln!("{} failed to create file '{}': {}","Error:".truecolor(173,127,172), sha256_file_name_for_write.white().bold(), e);
+                eprintln!("{} failed to create file '{}': {}","Error:".truecolor(173,127,172), checksum_file_name.white().bold(), e);
                 return;
             }
         };
-        if let Err(e) = file.write_all(lower_computed_hash_and_filename.as_bytes(),) {
-            eprintln!("{} failed to write to file '{}': {}","Error:".truecolor(173,127,172), sha256_file_name_for_write.white().bold(), e);
+        if let Err(e) = checksum_file.write_all(lower_computed_hash_and_filename.as_bytes(),) {
+            eprintln!("{} failed to write to file '{}': {}","Error:".truecolor(173,127,172), checksum_file_name.white().bold(), e);
             return;
         }
-        println!("{} file '{}' created and written to successfully", "Status:".truecolor(119,193,178), sha256_file_name_for_write.bold().white());
-        
+        println!("{} file '{}' created and written to successfully", "Status:".truecolor(119,193,178), checksum_file_name.bold().white());
+
     }
 
     if arg == "-c" && args.len() == 4 && args[3].len() == 64 {
         let arg_hash = &args[3];
         let lower_arg_hash = arg_hash.to_lowercase();
         let squiggles = highlight_differences(&lower_computed_hash, &lower_arg_hash);
-        // The colored vars no longer do anything. I now understand the jokes about legacy code.
         println!("{}", lower_computed_hash);
         if squiggles.contains('^') {
             println!("{}", squiggles);
@@ -112,36 +119,9 @@ fn main() {
         }
 
     if arg == "-c" && args.len() == 4 && args[3].len() < 60 && !args[3].to_lowercase().contains(".sha256") {
-        let file_name2 = &args[3];
-        let file2 = match File::open(file_name2) {
-                  Ok(file2) => file2,
-                  Err(_) => {
-                      eprintln!("{} failed to open the second file '{}'","Error:".truecolor(173,127,172), file_name2.bold().white());
-                      return;
-                  }
-              };
-        let mut reader2 = BufReader::new(file2);
-        let mut hasher2 = Sha256::new();
-        let mut buffer2 = [0; 65536];
-
-        let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
-
-              loop {
-                  let bytes_read2 = match reader2.read(&mut buffer2) {
-                      Ok(0) => break,
-                      Ok(n) => n,
-                      Err(_) => {
-                          clear_spinner_and_flush(&mut spinner);
-                          eprintln!("{} failed to read the second file '{}'","Error:".truecolor(173,127,172), file_name2.bold().white());
-                          return;
-                      }
-                  };
-                  hasher2.update(&buffer2[..bytes_read2]);
-              }
-
-        clear_spinner_and_flush(&mut spinner);
-
-        let computed_hash2 = format!("{:x}", hasher2.finalize());
+        let raw_second_file_path = PathBuf::from(&args[3]);
+        let second_filename = raw_second_file_path.file_name().unwrap().to_str().unwrap();
+        let computed_hash2 = compute_sha256_for_file(&raw_second_file_path, second_filename);
         let lower_computed_hash2 = computed_hash2.to_lowercase();
         let squiggles = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
         println!("{}", lower_computed_hash);
@@ -157,15 +137,11 @@ fn main() {
     }
     
     if arg == "-c" && args.len() == 4 && args[3].to_lowercase().contains(".sha256") {
-        let sha256_file_name = &args[3];
-        let processed_sha256_file_name = sha256_file_name
-         .trim()
-         .replace("./", "")
-         .replace(".\\", "");
-        let sha256_file_name = &processed_sha256_file_name.replace("\\", "/");
-         if let Ok(sha256_content) = read_sha256_file(&sha256_file_name) {
-             let text: String = sha256_content;
-             if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &file_name) {
+        let sha256_file_path = PathBuf::from(&args[3]);
+        let sha256_file_name = sha256_file_path.file_name().unwrap().to_str().unwrap();
+         if let Ok(sha256_content) = read_sha256_file(&sha256_file_path, sha256_file_name) {
+             let text: String = sha256_content.to_lowercase();
+             if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &lower_computed_hash) {
                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
                println!("{} hasher read directly from file '{}'","Warning:".truecolor(119,193,178), sha256_file_name.bold().white());
@@ -185,35 +161,62 @@ fn main() {
     }
 }
 
-fn read_sha256_file(file_name: &str) -> io::Result<String> {
+fn compute_sha256_for_file(filepath: &PathBuf, filename: &str) -> String {
+    let file = match File::open(filepath) {
+        Ok(file) => file,
+        Err(_e) => {
+             eprintln!("{} failed to open the file '{}'","Error:".truecolor(173,127,172), filename.bold().white());
+            std::process::exit(0);
+        }
+    };
+
     let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
-    let file_metadata = match std::fs::metadata(&file_name) {
+
+    let mut reader = BufReader::new(&file);
+    let mut hasher = Sha256::new();
+    let mut buffer = [0; 65536];
+
+    loop {
+        let bytes_read = match reader.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(bytes_read) => bytes_read,
+            Err(_e) => {
+                clear_spinner_and_flush(&mut spinner);
+                eprintln!("{} failed to read the file '{}'","Error:".truecolor(173,127,172), &filename.bold().white());
+                std::process::exit(0);
+            }
+        };
+
+        hasher.update(&buffer[..bytes_read]);
+    }
+    clear_spinner_and_flush(&mut spinner);
+    let result = hasher.finalize();
+    format!("{:x}", result)
+}
+
+fn read_sha256_file(file_path: &PathBuf, filename: &str) -> io::Result<String> {
+    let file_metadata = match std::fs::metadata(&file_path) {
         Ok(metadata) => metadata,
         Err(e) => {
-            clear_spinner_and_flush(&mut spinner);
-            eprintln!("{} failed to open the file '{}'","Error:".truecolor(173,127,172), &file_name.bold().white());
+             eprintln!("{} failed to open the file '{}'","Error:".truecolor(173,127,172), &filename.bold().white());
             return Err(e);
         }
     };
     const MAX_FILE_SIZE_BYTES: u64 = 100 * 1024 * 1024;
     if file_metadata.len() > MAX_FILE_SIZE_BYTES {
-        clear_spinner_and_flush(&mut spinner);
-        eprintln!("{} File '{}' size exceeds 100MB","Error:".truecolor(173,127,172), file_name);
+         eprintln!("{} File '{}' size exceeds 100MB","Error:".truecolor(173,127,172), filename);
         return Ok(Default::default());
     }
-    let mut sha256_file = File::open(file_name)?;
+    let mut sha256_file = File::open(file_path)?;
     let mut sha256_content = String::new();
     sha256_file.read_to_string(&mut sha256_content).map_err(|e| {
-        clear_spinner_and_flush(&mut spinner);
-        eprintln!("{} failed to read '{}' file content: {}","Error:".truecolor(173,127,172), file_name.bold().white(), e);
+         eprintln!("{} failed to read '{}' file content: {}","Error:".truecolor(173,127,172), filename.bold().white(), e);
         e
     })?;
     if sha256_content.is_empty() {
-        clear_spinner_and_flush(&mut spinner);
-        eprintln!("{} file '{}' is empty", "Error:".truecolor(173,127,172), file_name);
+         eprintln!("{} file '{}' is empty", "Error:".truecolor(173,127,172), filename);
         return Ok(Default::default());
     }
-    clear_spinner_and_flush(&mut spinner);
     Ok(sha256_content)
 }
 
@@ -236,15 +239,13 @@ fn highlight_differences(a: &str, b: &str) -> String {
     squiggles
 }
 
-fn find_sha256_for_filename<'a>(text: &'a str, filename: &'a str) -> Option<&'a str> {
+fn find_sha256_for_filename<'a>(text: &'a str, checksum: &str) -> Option<&'a str> {
     for line in text.lines() {
-        if line.contains(filename) {
             for word in line.split_whitespace() {
-                if word.len() == 64 && word.chars().all(|c| c.is_alphanumeric()) {
+                if word.contains(checksum) {
                     return Some(word);
                 }
             }
-        }
     }
     None
 }
@@ -252,4 +253,8 @@ fn find_sha256_for_filename<'a>(text: &'a str, filename: &'a str) -> Option<&'a 
 fn clear_spinner_and_flush(spinner: &mut Spinner) {
     spinner.clear();
     io::stdout().flush().unwrap();
+}
+
+fn strip_prefix<'a>(full_path: &'a Path, base_path: &Path) -> &'a Path {
+    full_path.strip_prefix(base_path).unwrap_or(full_path)
 }
