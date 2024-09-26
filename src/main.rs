@@ -243,6 +243,8 @@ fn find_sha256_for_filename<'a>(text: &'a str, checksum: &str) -> Option<&'a str
             for word in line.split_whitespace() {
                 if word.contains(checksum) {
                     return Some(word);
+                } else if word.len() == 64 && word.chars().all(|c| c.is_ascii_hexdigit()) {
+                    return Some(word);
                 }
             }
     }
