@@ -86,7 +86,6 @@ fn main() {
 
     if arg == "-w" {
         let sha256_file_name_raw = format!("{}.sha256", raw_first_file_path.to_str().unwrap());
-        println!("{}", sha256_file_name_raw);
         let mut checksum_file = match File::create(&sha256_file_name_raw) {
             Ok(file) => file,
             Err(e) => {
