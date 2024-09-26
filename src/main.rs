@@ -80,7 +80,7 @@ fn main() {
     let checksum_file_name = format!("{}.sha256", first_filename);
 
     if arg == "-s" {
-        println!("{}", lower_computed_hash.truecolor(119,193,178));
+        println!("{} {}", lower_computed_hash.truecolor(119,193,178), first_filename.truecolor(119,193,178));
         return;
     }
 
@@ -114,7 +114,7 @@ fn main() {
             if lower_computed_hash == lower_arg_hash {
                 println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
             } else {
-                println!("{} {}","Status:".truecolor(119,193,178), "Checksums do not match!");
+                println!("{} {}","Status:".truecolor(173,127,172), "Checksums do not match!");
             }
         }
 
@@ -132,7 +132,7 @@ fn main() {
         if lower_computed_hash == lower_computed_hash2 {
             println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
         } else {
-            println!("{} {}","Status:".truecolor(119,193,178), "Checksums do not match!");
+            println!("{} {}","Status:".truecolor(173,127,172), "Checksums do not match!");
         }
     }
     
@@ -154,7 +154,7 @@ fn main() {
                if lower_hash_from_external_file == lower_computed_hash {
                    println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
                } else {
-                   println!("{} {}","Status:".truecolor(119,193,178), "Checksums do not match!");
+                   println!("{} {}","Status:".truecolor(173,127,172), "Checksums do not match!");
                }
            }
          }
