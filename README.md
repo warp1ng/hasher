@@ -7,7 +7,7 @@ Use `hasher -s [filename]` to compute the sha256 hash of the file
 
 Use `hasher -w [filename]` to compute and write the hash to a file (automatically named after the input file)
 
-Use `hasher -wr [directory]` to compute and write the hash of a directory to a file (v1.0-alpha only)
+Use `hasher -wr [directory]` to compute and write the hash of a directory to a file
 
 Use `hasher -c [filename] [input]` to compare the input's computed checksum against your own `[input]` which can be a checksum, a .sha256 file or another file.
 
