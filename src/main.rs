@@ -80,7 +80,7 @@ fn main() {
     let checksum_file_name = format!("{}.sha256", first_filename);
 
     if arg == "-s" {
-        println!("{} {}", lower_computed_hash.truecolor(119,193,178), first_filename.truecolor(119,193,178));
+        println!("{} {}", lower_computed_hash.bold().white(), first_filename.bold().white());
         return;
     }
 
@@ -105,11 +105,11 @@ fn main() {
         let arg_hash = &args[3];
         let lower_arg_hash = arg_hash.to_lowercase();
         let squiggles = highlight_differences(&lower_computed_hash, &lower_arg_hash);
-        println!("{}", lower_computed_hash);
+        println!("{}", lower_computed_hash.bold().white());
         if squiggles.contains('^') {
             println!("{}", squiggles);
         }
-        println!("{}", lower_arg_hash);
+        println!("{}", lower_arg_hash.bold().white());
             if lower_computed_hash == lower_arg_hash {
                 println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
             } else {
@@ -123,11 +123,11 @@ fn main() {
         let computed_hash2 = compute_sha256_for_file(&raw_second_file_path, second_filename);
         let lower_computed_hash2 = computed_hash2.to_lowercase();
         let squiggles = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
-        println!("{}", lower_computed_hash);
+        println!("{}", lower_computed_hash.bold().white());
         if squiggles.contains('^') {
             println!("{}", squiggles);
         }
-        println!("{}", lower_computed_hash2);
+        println!("{}", lower_computed_hash2.bold().white());
         if lower_computed_hash == lower_computed_hash2 {
             println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
         } else {
@@ -144,11 +144,11 @@ fn main() {
                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
                println!("{} hasher read directly from file '{}'","Warning:".truecolor(119,193,178), sha256_file_name.bold().white());
-               println!("{}", lower_computed_hash);
+               println!("{}", lower_computed_hash.bold().white());
                  if squiggles.contains('^') {
                      println!("{}", squiggles);
                  }
-               println!("{}", lower_hash_from_external_file);
+               println!("{}", lower_hash_from_external_file.bold().white());
 
                if lower_hash_from_external_file == lower_computed_hash {
                    println!("{} {}","Status:".truecolor(119,193,178), "Checksums match!");
