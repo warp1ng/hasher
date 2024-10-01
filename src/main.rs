@@ -58,6 +58,7 @@ fn main() {
         let checksums_path = dir.join(checksums_file_name.clone());
         let mut count_good = 0;
         let mut count_bad = 0;
+        let mut bad_files: Vec<String> = Vec::new();
         if let Ok(sha256_content) = read_sha256_file(&checksums_path, dir_name) {
             let text: String = sha256_content.to_lowercase();
             let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
@@ -77,6 +78,7 @@ fn main() {
                         }
                     } else {
                         count_bad += 1;
+                        bad_files.push(path.to_string_lossy().to_string());
                     }
                 }
             }
@@ -84,20 +86,26 @@ fn main() {
         }
         let total_count = count_good + count_bad;
         if count_bad == 0 {
-            println!("{} {}","Status:".truecolor(119,193,178), "All checksums match!");
+            println!("{} {}", "Status:".truecolor(119, 193, 178), "All checksums match!");
             return;
         }
         if count_good == 0 {
-            println!("{} {}","Status:".truecolor(173,127,172), "No checksums match!");
+            println!("{} {}", "Status:".truecolor(173, 127, 172), "No checksums match!");
             return;
         }
         if count_bad > count_good {
-            println!("{} {} out of {} checksums match!","Status:".truecolor(173,127,172), count_good.to_string().white().bold(), total_count.to_string().white().bold());
+            println!("{} {} out of {} checksums match!", "Status:".truecolor(173, 127, 172), count_good.to_string().white().bold(), total_count.to_string().white().bold());
         } else {
-            println!("{} {} out of {} checksums match!","Status:".truecolor(119,193,178), count_good.to_string().white().bold(), total_count.to_string().white().bold());
-        }
+            println!("{} {} out of {} checksums match!", "Status:".truecolor(119, 193, 178), count_good.to_string().white().bold(), total_count.to_string().white().bold());
+            if !bad_files.is_empty() && bad_files.len() < 10 {
+                println!("Files with mismatched hashes:");
+                for file in bad_files {
+                    println!("{}", file);
+                }
+            }
 
-        return;
+            return;
+        }
     }
 
 
