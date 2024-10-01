@@ -140,7 +140,6 @@ fn main() {
         let sha256_file_name = sha256_file_path.file_name().unwrap().to_str().unwrap();
          if let Ok(sha256_content) = read_sha256_file(&sha256_file_path, sha256_file_name) {
              let text: String = sha256_content.to_lowercase();
-             println!("{}", lower_computed_hash);
              if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &lower_computed_hash) {
                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
