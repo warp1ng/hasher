@@ -140,6 +140,7 @@ fn main() {
         let sha256_file_name = sha256_file_path.file_name().unwrap().to_str().unwrap();
          if let Ok(sha256_content) = read_sha256_file(&sha256_file_path, sha256_file_name) {
              let text: String = sha256_content.to_lowercase();
+             println!("{}", lower_computed_hash);
              if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &lower_computed_hash) {
                let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
@@ -169,7 +170,7 @@ fn compute_sha256_for_file(filepath: &PathBuf, filename: &str) -> String {
         }
     };
 
-    let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+    //let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
 
     let mut reader = BufReader::new(&file);
     let mut hasher = Sha256::new();
@@ -180,7 +181,7 @@ fn compute_sha256_for_file(filepath: &PathBuf, filename: &str) -> String {
             Ok(0) => break,
             Ok(bytes_read) => bytes_read,
             Err(_e) => {
-                clear_spinner_and_flush(&mut spinner);
+                //clear_spinner_and_flush(&mut spinner);
                 eprintln!("{} failed to read the file '{}'","Error:".truecolor(173,127,172), &filename.bold().white());
                 std::process::exit(0);
             }
@@ -188,7 +189,7 @@ fn compute_sha256_for_file(filepath: &PathBuf, filename: &str) -> String {
 
         hasher.update(&buffer[..bytes_read]);
     }
-    clear_spinner_and_flush(&mut spinner);
+    //clear_spinner_and_flush(&mut spinner);
     let result = hasher.finalize();
     format!("{:x}", result)
 }
@@ -240,13 +241,11 @@ fn highlight_differences(a: &str, b: &str) -> String {
 
 fn find_sha256_for_filename<'a>(text: &'a str, checksum: &str) -> Option<&'a str> {
     for line in text.lines() {
-            for word in line.split_whitespace() {
-                if word.contains(checksum) {
-                    return Some(word);
-                } else if word.len() == 64 && word.chars().all(|c| c.is_ascii_hexdigit()) {
-                    return Some(word);
-                }
+        for word in line.split_whitespace() {
+            if word.starts_with(checksum) && word.len() >= 64 {
+                return Some(&word[..64]);
             }
+        }
     }
     None
 }
