@@ -61,7 +61,7 @@ fn main() {
         let mut bad_files: Vec<String> = Vec::new();
         if let Ok(sha256_content) = read_sha256_file(&checksums_path, dir_name) {
             let text: String = sha256_content.to_lowercase();
-            let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+             let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
             for entry in WalkDir::new(dir.clone()).into_iter().filter_map(Result::ok) {
                 let path = entry.path();
                 if path.is_file() {
@@ -70,7 +70,7 @@ fn main() {
                             continue;
                         }
                     }
-                    let file_hash = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name);
+                    let file_hash = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false);
                     let relative_path = strip_prefix(path, &dir);
                     if let Some(hash_from_external_raw) = find_sha256_for_filename(&text, &file_hash) {
                         let hash_from_external_file = hash_from_external_raw.to_lowercase();
@@ -83,7 +83,7 @@ fn main() {
                     }
                 }
             }
-            clear_spinner_and_flush(&mut spinner);
+             clear_spinner_and_flush(&mut spinner);
         }
         let total_count = count_good + count_bad;
         if count_bad == 0 {
@@ -128,7 +128,7 @@ fn main() {
                         continue;
                     }
                 }
-                let result = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name);
+                let result = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name,false);
                 let relative_path = strip_prefix(path, &dir);
                 let text_to_write = format!("{} {}", result, relative_path.display());
                 writeln!(checksums_file, "{}", text_to_write).unwrap();
@@ -141,7 +141,7 @@ fn main() {
 
     let raw_first_file_path = PathBuf::from(&args[2]);
     let first_filename = raw_first_file_path.file_name().unwrap().to_str().unwrap();
-    let computed_hash = compute_sha256_for_file(&raw_first_file_path, first_filename);
+    let computed_hash = compute_sha256_for_file(&raw_first_file_path, first_filename, true);
     let lower_computed_hash = computed_hash.to_lowercase();
     let lower_computed_hash_and_filename = computed_hash + " " + &first_filename;
     let checksum_file_name = format!("{}.sha256", first_filename);
@@ -184,10 +184,10 @@ fn main() {
             }
         }
 
-    if arg == "-c" && args.len() == 4 && args[3].len() < 60 && !args[3].to_lowercase().contains(".sha256") {
+    if arg == "-c" && args.len() == 4 && !args[3].to_lowercase().contains(".sha256") {
         let raw_second_file_path = PathBuf::from(&args[3]);
         let second_filename = raw_second_file_path.file_name().unwrap().to_str().unwrap();
-        let computed_hash2 = compute_sha256_for_file(&raw_second_file_path, second_filename);
+        let computed_hash2 = compute_sha256_for_file(&raw_second_file_path, second_filename, true);
         let lower_computed_hash2 = computed_hash2.to_lowercase();
         let squiggles = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
         println!("{}", lower_computed_hash.bold().white());
@@ -227,7 +227,7 @@ fn main() {
     }
 }
 
-fn compute_sha256_for_file(filepath: &PathBuf, filename: &str) -> String {
+fn compute_sha256_for_file(filepath: &PathBuf, filename: &str, spinner_switch: bool) -> String {
     let file = match File::open(filepath) {
         Ok(file) => file,
         Err(_e) => {
@@ -240,23 +240,41 @@ fn compute_sha256_for_file(filepath: &PathBuf, filename: &str) -> String {
     let mut hasher = Sha256::new();
     let mut buffer = [0; 65536];
 
-    loop {
-        let bytes_read = match reader.read(&mut buffer) {
-            Ok(0) => break,
-            Ok(bytes_read) => bytes_read,
-            Err(_e) => {
-                //clear_spinner_and_flush(&mut spinner);
-                eprintln!("{} failed to read the file '{}'","Error:".truecolor(173,127,172), &filename.bold().white());
-                std::process::exit(0);
-            }
-        };
+    if spinner_switch {
+        let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+        loop {
+            let bytes_read = match reader.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(bytes_read) => bytes_read,
+                Err(_e) => {
+                    clear_spinner_and_flush(&mut spinner);
+                    eprintln!("{} failed to read the file '{}'","Error:".truecolor(173,127,172), &filename.bold().white());
+                    std::process::exit(0);
+                }
+            };
+            hasher.update(&buffer[..bytes_read]);
+        }
+        clear_spinner_and_flush(&mut spinner);
+        let result = hasher.finalize();
+        format!("{:x}", result)
 
-        hasher.update(&buffer[..bytes_read]);
+    } else {
+
+        loop {
+            let bytes_read = match reader.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(bytes_read) => bytes_read,
+                Err(_e) => {
+                    eprintln!("{} failed to read the file '{}'","Error:".truecolor(173,127,172), &filename.bold().white());
+                    std::process::exit(0);
+                }
+            };
+            hasher.update(&buffer[..bytes_read]);
+        }
+        let result = hasher.finalize();
+        format!("{:x}", result)
     }
 
-
-    let result = hasher.finalize();
-    format!("{:x}", result)
 }
 
 fn read_sha256_file(file_path: &PathBuf, filename: &str) -> io::Result<String> {
