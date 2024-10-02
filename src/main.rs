@@ -71,6 +71,7 @@ fn main() {
                         }
                     }
                     let file_hash = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name);
+                    let relative_path = strip_prefix(path, &dir);
                     if let Some(hash_from_external_raw) = find_sha256_for_filename(&text, &file_hash) {
                         let hash_from_external_file = hash_from_external_raw.to_lowercase();
                         if file_hash == hash_from_external_file {
@@ -78,7 +79,7 @@ fn main() {
                         }
                     } else {
                         count_bad += 1;
-                        bad_files.push(path.to_string_lossy().to_string());
+                        bad_files.push(relative_path.to_string_lossy().to_string());
                     }
                 }
             }
@@ -93,19 +94,17 @@ fn main() {
             println!("{} {}", "Status:".truecolor(173, 127, 172), "No checksums match!");
             return;
         }
-        if count_bad > count_good {
-            println!("{} {} out of {} checksums match!", "Status:".truecolor(173, 127, 172), count_good.to_string().white().bold(), total_count.to_string().white().bold());
-        } else {
-            println!("{} {} out of {} checksums match!", "Status:".truecolor(119, 193, 178), count_good.to_string().white().bold(), total_count.to_string().white().bold());
-            if !bad_files.is_empty() {
-                println!("Files with mismatched hashes:");
-                for file in bad_files {
-                    println!("{}", file);
-                }
-            }
 
-            return;
+        if count_good > count_bad {
+            println!("{} {} out of {} checksums match!", "Status:".truecolor(119, 193, 178), count_good.to_string().white().bold(), total_count.to_string().white().bold());
+        } else {
+            println!("{} {} out of {} checksums match!", "Status:".truecolor(173, 127, 172), count_good.to_string().white().bold(), total_count.to_string().white().bold());
         }
+        println!("Files with mismatched hashes:");
+        for file in bad_files {
+            println!("{}", file);
+        }
+        return;
     }
 
 
@@ -237,8 +236,6 @@ fn compute_sha256_for_file(filepath: &PathBuf, filename: &str) -> String {
         }
     };
 
-    //let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
-
     let mut reader = BufReader::new(&file);
     let mut hasher = Sha256::new();
     let mut buffer = [0; 65536];
@@ -256,7 +253,8 @@ fn compute_sha256_for_file(filepath: &PathBuf, filename: &str) -> String {
 
         hasher.update(&buffer[..bytes_read]);
     }
-    //clear_spinner_and_flush(&mut spinner);
+
+
     let result = hasher.finalize();
     format!("{:x}", result)
 }
