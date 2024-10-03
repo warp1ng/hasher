@@ -22,11 +22,12 @@ fn main() {
         return;
     }
     if &args[1] == "-h" {
-        println!("Usage: hasher [switch] [filename/directory] [input]");
-        println!("-s prints the computed sha256 checksum");
-        println!("-w writes the computed sha256 checksum to a .sha256 file named after the input file");
-        println!("-wr does the same thing as '-w' but for an entire directory");
-        println!("-c compares a file's checksum against your [input], which can be a 64 char hash, a sha256 file or just another file");
+        println!("Usage:");
+        println!("-s [filename] to compute the sha256 checksum of the file");
+        println!("-c [filename] [input] to compare the input's computed checksum against your own [input] which can be a checksums, a .sha256 file or another file");
+        println!("-w [filename] to compute and write the checksum to a file (automatically named after the input file)");
+        println!("-wr [directory] to compute and write the checksums of all files in a directory to a file");
+        println!("cr [directory] to compare the checksums of a .sha256 file located inside the directory to all the files there");
         return;
     }
     if args.len() < 3 {
