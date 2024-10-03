@@ -166,7 +166,7 @@ fn main() {
             return;
         }
         println!("{} file '{}' created and written to successfully", "Status:".truecolor(119,193,178), checksum_file_name.bold().white());
-
+        return;
     }
 
     if arg == "-c" && args.len() == 4 && args[3].len() == 64 {
@@ -183,6 +183,7 @@ fn main() {
             } else {
                 println!("{} {}","Status:".truecolor(173,127,172), "Checksums do not match!");
             }
+        return;
         }
 
     if arg == "-c" && args.len() == 4 && !args[3].to_lowercase().contains(".sha256") {
@@ -201,6 +202,7 @@ fn main() {
         } else {
             println!("{} {}","Status:".truecolor(173,127,172), "Checksums do not match!");
         }
+        return;
     }
     
     if arg == "-c" && args.len() == 4 && args[3].to_lowercase().contains(".sha256") {
@@ -225,6 +227,7 @@ fn main() {
                }
            }
          }
+        return;
     }
 }
 
