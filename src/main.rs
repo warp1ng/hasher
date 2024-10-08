@@ -95,7 +95,7 @@ fn main() {
             println!("{} {}", "Status:".truecolor(173, 127, 172), "No checksums match!");
             return;
         }
-
+        println!("Files with mismatched hashes:");
         for file in bad_files {
             println!("{}", file);
         }
@@ -105,7 +105,6 @@ fn main() {
         } else {
             println!("{} {} out of {} checksums match!", "Status:".truecolor(173, 127, 172), count_good.to_string().white().bold(), total_count.to_string().white().bold());
         }
-        println!("Files with mismatched hashes:");
         return;
     }
 
