@@ -68,7 +68,8 @@ fn main() {
         let mut bad_files: Vec<String> = Vec::new();
         if let Ok(sha256_content) = read_sha256_file(&checksums_path, dir_name) {
             let text: String = sha256_content.to_lowercase();
-             let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+            let loading_message = format!("Verifying checksums for directory '{}'", dir_name.white().bold());
+            let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
             for entry in WalkDir::new(dir.clone()).into_iter().filter_map(Result::ok) {
                 let path = entry.path();
                 if path.is_file() {
@@ -126,7 +127,8 @@ fn main() {
                 return;
             }
         };
-        let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+        let loading_message = format!("Computing checksums for directory '{}'", dir_name.white().bold());
+        let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
         for entry in WalkDir::new(dir.clone()).into_iter().filter_map(Result::ok) {
             let path = entry.path();
             if path.is_file() {
@@ -251,7 +253,8 @@ fn compute_sha256_for_file(filepath: &PathBuf, filename: &str, spinner_switch: b
     let mut buffer = [0; 65536];
 
     if spinner_switch {
-        let mut spinner = Spinner::new_with_stream(spinners::Line, "Loading...", Color::White, Streams::Stdout);
+        let loading_message = format!("Loading file '{}'", filename.white().bold());
+        let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
         loop {
             let bytes_read = match reader.read(&mut buffer) {
                 Ok(0) => break,
