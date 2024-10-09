@@ -63,6 +63,10 @@ fn main() {
         let dir_name = dir.file_name().unwrap().to_str().unwrap();
         let checksums_file_name = format!("{}.sha256", dir_name);
         let checksums_path = dir.join(checksums_file_name.clone());
+        if !checksums_path.exists() {
+            eprintln!("{} file '{}' is missing", "Error:".truecolor(173,127,172), checksums_file_name.white().bold());
+            return;
+        }
         let mut count_good = 0;
         let mut count_bad = 0;
         let mut bad_files: Vec<String> = Vec::new();
