@@ -1,5 +1,6 @@
 use std::io::{self, BufReader, Read, Write};
 use std::env;
+use std::env::current_dir;
 use std::fs::File;
 use sha2::{Sha256, Digest};
 use colored::*;
@@ -26,11 +27,12 @@ fn main() {
         println!("-s [filename] to compute the sha256 checksum of the file");
         println!("-c [filename] [input] to compare the input's computed checksum against your own [input] which can be a checksums, a .sha256 file or another file");
         println!("-w [filename] to compute and write the checksum to a file (automatically named after the input file)");
-        println!("-wr [directory] to compute and write the checksums of all files in a directory to a file");
-        println!("cr [directory] to compare the checksums of a .sha256 file located inside the directory to all the files there");
+        println!("-wr / -wr [directory] to compute and write the checksums of all files in a directory to a file");
+        println!("-cr / -cr [directory] to compare the checksums of a .sha256 file located inside the directory to all the files there");
+        println!("note: both '-wr' and '-cr' switches can be run as is to use the current directory");
         return;
     }
-    if args.len() < 3 {
+    if args.len() < 3 && arg != "-cr" && arg != "-wr"  {
         println!("Use hasher -h for help");
         return;
     }
@@ -40,7 +42,12 @@ fn main() {
         return;
     }
 
-    let dir = PathBuf::from(&args[2]);
+    let dir;
+    if args.len() == 3 {
+        dir = PathBuf::from(&args[2]);
+    } else {
+        dir = PathBuf::from(current_dir().unwrap());
+    }
 
     if arg == "-wr" && !dir.is_dir() {
         println!("{} '-wr' switch requires a directory", "Error:".truecolor(173,127,172));
@@ -51,7 +58,6 @@ fn main() {
         println!("{} '-cr' switch requires a directory", "Error:".truecolor(173,127,172));
         return;
     }
-
 
     if arg == "-cr" && dir.is_dir() {
         let dir_name = dir.file_name().unwrap().to_str().unwrap();
