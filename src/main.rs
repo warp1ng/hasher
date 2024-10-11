@@ -45,6 +45,10 @@ fn main() {
     let dir;
     if args.len() == 3 {
         dir = PathBuf::from(&args[2]);
+        if !dir.exists() {
+            eprintln!("{} could not find '{}' directory", "Error:".truecolor(173,127,172), dir.display().to_string().white().bold());
+            return;
+        }
     } else {
         dir = current_dir().unwrap();
     }
