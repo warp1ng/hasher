@@ -163,6 +163,8 @@ fn main() {
     let lower_computed_hash_and_filename = computed_hash + " " + first_filename;
     let checksum_file_name = format!("{}.sha256", first_filename);
 
+    let shortened_first_filename = shorten_file_name(first_filename, 22);
+
     if arg == "-s" {
         println!("{} {}", lower_computed_hash.bold().white(), first_filename.bold().white());
         return;
@@ -188,7 +190,7 @@ fn main() {
     if arg == "-c" && args.len() == 4 && args[3].len() == 64 {
         let arg_hash = &args[3];
         let lower_arg_hash = arg_hash.to_lowercase();
-        let (padded_first_filename, arg_whitespace) = pad_strings(first_filename, "USER-SHA256");
+        let (padded_first_filename, arg_whitespace) = pad_strings(&shortened_first_filename, "USER-SHA256");
         let squiggles = highlight_differences(&lower_computed_hash, &lower_arg_hash, &padded_first_filename);
         if lower_computed_hash == lower_arg_hash {
             println!("{} Checksums match!", "Status:".truecolor(119,193,178));
@@ -206,9 +208,10 @@ fn main() {
     if arg == "-c" && args.len() == 4 && !args[3].to_lowercase().contains(".sha256") {
         let raw_second_file_path = PathBuf::from(&args[3]);
         let second_filename = raw_second_file_path.file_name().unwrap().to_str().unwrap();
+        let shortened_second_filename = shorten_file_name(second_filename, 22);
         let computed_hash2 = compute_sha256_for_file(&raw_second_file_path, second_filename, true);
         let lower_computed_hash2 = computed_hash2.to_lowercase();
-        let (padded_first_filename, padded_second_filename) = pad_strings(first_filename, second_filename);
+        let (padded_first_filename, padded_second_filename) = pad_strings(&shortened_first_filename, &shortened_second_filename);
         if lower_computed_hash == lower_computed_hash2 {
             println!("{} Checksums match!", "Status:".truecolor(119,193,178));
         } else {
@@ -230,7 +233,8 @@ fn main() {
             let text: String = sha256_content.to_lowercase();
             if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &lower_computed_hash, sha256_file_name) {
                 let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-                let (padded_first_filename, padded_sha256_file_name) = pad_strings(first_filename, sha256_file_name);
+                let shortened_sha256_file_name = shorten_file_name(sha256_file_name, 24);
+                let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
                 let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
                 if lower_hash_from_external_file == lower_computed_hash {
                     println!("{} Checksums match!" , "Status:".truecolor(119,193,178));
@@ -387,4 +391,16 @@ fn pad_strings(str1: &str, str2: &str) -> (String, String) {
     };
 
     (padded_str1, padded_str2)
+}
+
+fn shorten_file_name(file_name: &str, max_len: usize) -> String {
+    if file_name.len() > max_len {
+        let end_len = 7;
+        let start_len = max_len - end_len - 3;
+        let start = &file_name[..start_len];
+        let end = &file_name[file_name.len() - end_len..];
+        format!("{}...{}", start, end)
+    } else {
+        file_name.to_string()
+    }
 }
