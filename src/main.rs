@@ -349,7 +349,7 @@ fn main() {
     fn find_sha256_for_filename<'a>(text: &'a str, checksum: &str) -> Option<&'a str> {
         for line in text.lines() {
             for word in line.split_whitespace() {
-                if word.contains(checksum) && word.len() == 64 {
+                if word.starts_with(checksum) && word.len() == 64 {
                     return Some(&word[..64]);
                 }
             }
