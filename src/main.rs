@@ -186,7 +186,7 @@ fn main() {
         return;
     }
 
-    if arg == "-c" && args.len() == 4 && args[3].len() == 64 {
+    if arg == "-c" && args.len() >= 4 && args[3].len() == 64 {
         let arg_hash = &args[3];
         let lower_arg_hash = arg_hash.to_lowercase();
         let (padded_first_filename, arg_whitespace) = pad_strings(&shortened_first_filename, "USER-SHA256");
@@ -204,7 +204,7 @@ fn main() {
         return;
     }
 
-    if arg == "-c" && args.len() == 4 && !args[3].to_lowercase().contains(".sha256") {
+    if arg == "-c" && args.len() >= 4 && !args[3].to_lowercase().contains(".sha256") {
         let raw_second_file_path = PathBuf::from(&args[3]);
         let second_filename = raw_second_file_path.file_name().unwrap().to_str().unwrap();
         let shortened_second_filename = shorten_file_name(second_filename, 22);
@@ -225,7 +225,7 @@ fn main() {
         return;
     }
 
-    if arg == "-c" && args.len() == 4 && args[3].to_lowercase().contains(".sha256") {
+    if arg == "-c" && args.len() >= 4 && args[3].to_lowercase().contains(".sha256") {
         let sha256_file_path = PathBuf::from(&args[3]);
         let sha256_file_name = sha256_file_path.file_name().unwrap().to_str().unwrap();
         if let Ok(sha256_content) = read_sha256_file(&sha256_file_path, sha256_file_name) {
