@@ -1,5 +1,5 @@
 use std::io::{self, BufReader, Read, Write};
-use std::env;
+use std::{env};
 use std::env::current_dir;
 use std::fs::File;
 use sha2::{Sha256, Digest};
@@ -82,7 +82,7 @@ fn main() {
                 let path = entry.path();
                 if path.is_file() {
                     if let Some(file_name) = path.file_name() {
-                        if *file_name == *checksums_file_name {
+                        if *file_name.to_ascii_lowercase() == *checksums_file_name.to_ascii_lowercase() {
                             continue;
                         }
                     }
@@ -140,7 +140,7 @@ fn main() {
             let path = entry.path();
             if path.is_file() {
                 if let Some(file_name) = path.file_name() {
-                    if *file_name == *checksums_file_name {
+                    if *file_name.to_ascii_lowercase() == *checksums_file_name.to_ascii_lowercase() {
                         continue;
                     }
                 }
