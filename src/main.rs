@@ -191,16 +191,16 @@ fn main() {
         let lower_arg_hash = arg_hash.to_lowercase();
         let (padded_first_filename, arg_whitespace) = pad_strings(&shortened_first_filename, "USER-SHA256");
         let squiggles = highlight_differences(&lower_computed_hash, &lower_arg_hash, &padded_first_filename);
-        if lower_computed_hash == lower_arg_hash {
-            println!("{} Checksums match!", "Status:".truecolor(119, 193, 178));
-        } else {
-            println!("{} Checksums do not match!", "Status:".truecolor(173, 127, 172));
-        }
         println!("{} : {}", padded_first_filename, lower_computed_hash.bold().white());
         if squiggles.contains('^') {
             println!("{}", squiggles);
         }
         println!("{} : {}", arg_whitespace, lower_arg_hash.bold().white());
+        if lower_computed_hash == lower_arg_hash {
+            println!("{} Checksums match!", "Status:".truecolor(119, 193, 178));
+        } else {
+            println!("{} Checksums do not match!", "Status:".truecolor(173, 127, 172));
+        }
         return;
     }
 
