@@ -204,7 +204,7 @@ fn main() {
         return;
     }
 
-    if arg == "-c" && args.len() >= 4 && !args[3].to_lowercase().contains(".sha256") {
+    if arg == "-c" && args.len() >= 4 && !args[3].to_lowercase().contains("sha256") {
         let raw_second_file_path = PathBuf::from(&args[3]);
         let second_filename = raw_second_file_path.file_name().unwrap().to_str().unwrap();
         let shortened_second_filename = shorten_file_name(second_filename, 22);
@@ -225,7 +225,7 @@ fn main() {
         return;
     }
 
-    if arg == "-c" && args.len() >= 4 && args[3].to_lowercase().contains(".sha256") {
+    if arg == "-c" && args.len() >= 4 && args[3].to_lowercase().contains("sha256") {
         let sha256_file_path = PathBuf::from(&args[3]);
         let sha256_file_name = sha256_file_path.file_name().unwrap().to_str().unwrap();
         if let Ok(sha256_content) = read_sha256_file(&sha256_file_path, sha256_file_name) {
@@ -235,7 +235,7 @@ fn main() {
                 let shortened_sha256_file_name = shorten_file_name(sha256_file_name, 24);
                 let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
                 let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
-                println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), padded_sha256_file_name.bold().white());
+                println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), sha256_file_name.bold().white());
                 println!("{} : {}", padded_first_filename, lower_computed_hash.bold().white());
                 if squiggles.contains('^') {
                     println!("{}", squiggles);
