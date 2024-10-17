@@ -9,9 +9,9 @@ Use `hasher -c [filename] [input]` to compare the input's computed checksum agai
 
 Use `hasher -w [filename]` to compute and write the checksum to a file (automatically named after the input file)
 
-Use `hasher -wr / -wr [directory]` to compute and write the checksums of all files in a directory to a file
+Use `hasher -wr [directory] / hasher -wr` to compute and write the checksums of all files in a directory to a file
 
-Use `hasher -cr / -cr [directory]` to compare the checksums of a .sha256 file located inside the directory to all the files there
+Use `hasher -cr [directory] / hasher -cr` to compare the checksums of a .sha256 file located inside the directory to all the files there
 
 Note: if a directory is not provided for `-wr` and `-cr` switches then the program will use the current directory instead
 
