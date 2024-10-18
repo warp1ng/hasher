@@ -404,7 +404,7 @@ fn shorten_file_name(file_name: &str, max_len: usize) -> String {
 fn contains_valid_sha256(file_path: &str) -> Result<bool, io::Error> {
     let file_contents = fs::read_to_string(file_path)?;
     let re = Regex::new(r"([0-9a-fA-F]{64})").unwrap();
-    if let Some(captures) = re.captures(&file_contents) {
+    if let Some(_captures) = re.captures(&file_contents) {
         Ok(true)
     } else {
         Ok(false)
