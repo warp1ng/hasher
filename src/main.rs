@@ -207,7 +207,7 @@ fn main() {
     if arg == "-c" && args.len() >= 4 {
         let second_file_path = PathBuf::from(&args[3]);
         let second_file_name = second_file_path.file_name().unwrap().to_str().unwrap();
-        match contains_valid_sha256(&args[3]) {
+        match contains_valid_sha256(&second_file_path, &second_file_name) {
             Ok(true) => {
                 if let Ok(sha256_content) = read_sha256_file(&second_file_path, second_file_name) {
                     let text: String = sha256_content.to_lowercase();
@@ -399,12 +399,34 @@ fn shorten_file_name(file_name: &str, max_len: usize) -> String {
     }
 }
 
-fn contains_valid_sha256(file_path: &str) -> Result<bool, io::Error> {
-    let file_contents = fs::read_to_string(file_path)?;
-    let re = Regex::new(r"([0-9a-fA-F]{64})").unwrap();
-    if let Some(_captures) = re.captures(&file_contents) {
-        Ok(true)
-    } else {
-        Ok(false)
+fn contains_valid_sha256(file_path: &PathBuf, second_file_name: &str) -> Result<bool, io::Error> {
+    match check_size(file_path, second_file_name) {
+        Ok(_) => {
+            let file_contents = fs::read_to_string(file_path)?;
+            let re = Regex::new(r"([0-9a-fA-F]{64})").unwrap();
+            if let Some(_captures) = re.captures(&file_contents) {
+                Ok(true)
+            } else {
+                Ok(false)
+            }
+        }
+        Err(_) => {
+            Ok(false)
+        }
     }
+}
+
+fn check_size(file_path: &PathBuf, file_name: &str) -> Result<bool, io::Error> {
+    let file_metadata = match std::fs::metadata(file_path) {
+        Ok(metadata) => metadata,
+        Err(e) => {
+            eprintln!("{} failed to open the file '{}'", "Error:".truecolor(173, 127, 172), &file_name.bold().white());
+            return Err(e);
+        }
+    };
+    const MAX_FILE_SIZE_BYTES: u64 = 10 * 1024 * 1024;
+    if file_metadata.len() > MAX_FILE_SIZE_BYTES {
+        return Ok(false);
+    }
+    Ok(true)
 }
