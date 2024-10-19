@@ -205,18 +205,18 @@ fn main() {
         return;
     }
     if arg == "-c" && args.len() >= 4 {
+        let second_file_path = PathBuf::from(&args[3]);
+        let second_file_name = second_file_path.file_name().unwrap().to_str().unwrap();
         match contains_valid_sha256(&args[3]) {
             Ok(true) => {
-                let sha256_file_path = PathBuf::from(&args[3]);
-                let sha256_file_name = sha256_file_path.file_name().unwrap().to_str().unwrap();
-                if let Ok(sha256_content) = read_sha256_file(&sha256_file_path, sha256_file_name) {
+                if let Ok(sha256_content) = read_sha256_file(&second_file_path, second_file_name) {
                     let text: String = sha256_content.to_lowercase();
                     if let Some(hash_from_external_file) = find_sha256_for_filename(&text, &lower_computed_hash) {
                         let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-                        let shortened_sha256_file_name = shorten_file_name(sha256_file_name, 24);
+                        let shortened_sha256_file_name = shorten_file_name(second_file_name, 24);
                         let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
                         let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
-                        println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), sha256_file_name.bold().white());
+                        println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
                         println!("{} : {}", padded_first_filename, lower_computed_hash.bold().white());
                         if squiggles.contains('^') {
                             println!("{}", squiggles);
@@ -232,10 +232,8 @@ fn main() {
                 return;
             }
             Ok(false) | Err(_) => {
-                let raw_second_file_path = PathBuf::from(&args[3]);
-                let second_filename = raw_second_file_path.file_name().unwrap().to_str().unwrap();
-                let shortened_second_filename = shorten_file_name(second_filename, 22);
-                let computed_hash2 = compute_sha256_for_file(&raw_second_file_path, second_filename, true);
+                let shortened_second_filename = shorten_file_name(second_file_name, 22);
+                let computed_hash2 = compute_sha256_for_file(&second_file_path, second_file_name, true);
                 let lower_computed_hash2 = computed_hash2.to_lowercase();
                 let (padded_first_filename, padded_second_filename) = pad_strings(&shortened_first_filename, &shortened_second_filename);
                 let squiggles = highlight_differences(&lower_computed_hash, &lower_computed_hash2, &padded_first_filename);
