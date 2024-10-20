@@ -89,7 +89,7 @@ fn main() {
                     }
                     let file_hash = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false);
                     let relative_path = strip_prefix(path, &dir);
-                    if let Some(hash_from_external_raw) = find_matching_sha256_for_filename(&text, &file_hash) {
+                    if let Some(hash_from_external_raw) = find_matching_sha256_for_filename(&text, &file_hash, false) {
                         let hash_from_external_file = hash_from_external_raw.to_lowercase();
                         if file_hash == hash_from_external_file {
                             count_good += 1;
@@ -211,7 +211,7 @@ fn main() {
             Ok(true) => {
                 if let Ok(sha256_content) = read_sha256_file(&second_file_path, second_file_name) {
                     let text: String = sha256_content.to_lowercase();
-                    if let Some(hash_from_external_file) = find_any_sha256_for_filename(&text, &lower_computed_hash) {
+                    if let Some(hash_from_external_file) = find_matching_sha256_for_filename(&text, &lower_computed_hash, true) {
                         let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                         let shortened_sha256_file_name = shorten_file_name(second_file_name, 24);
                         let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
@@ -348,24 +348,19 @@ fn highlight_differences(a: &str, b: &str, c: &str) -> String {
     squiggles
 }
 
-fn find_any_sha256_for_filename<'a>(text: &'a str, checksum: &str) -> Option<&'a str> {
+fn find_matching_sha256_for_filename<'a>(text: &'a str, checksum: &str, any_hash: bool) -> Option<&'a str> {
     for line in text.lines() {
         for word in line.split_whitespace() {
-            if word.starts_with(checksum) && word.len() == 64 {
-                return Some(&word[..64]);
-            } else if word.len() == 64 {
-                return Some(&word[..64]);
-            }
-        }
-    }
-    None
-}
-
-fn find_matching_sha256_for_filename<'a>(text: &'a str, checksum: &str) -> Option<&'a str> {
-    for line in text.lines() {
-        for word in line.split_whitespace() {
-            if word.starts_with(checksum) && word.len() == 64 {
-                return Some(&word[..64]);
+            if any_hash {
+                if word.starts_with(checksum) && word.len() == 64 {
+                    return Some(&word[..64]);
+                } else if word.len() == 64 {
+                    return Some(&word[..64]);
+                }
+            } else {
+                if word.starts_with(checksum) && word.len() == 64 {
+                    return Some(&word[..64]);
+                }
             }
         }
     }
