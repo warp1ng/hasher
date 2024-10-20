@@ -163,7 +163,7 @@ fn main() {
     let lower_computed_hash_and_filename = computed_hash + " " + first_filename;
     let checksum_file_name = format!("{}.sha256", first_filename);
 
-    let shortened_first_filename = shorten_file_name(first_filename, 22);
+    let shortened_first_filename = shorten_file_name(first_filename, 18);
 
     if arg == "-s" {
         println!("{} {}", lower_computed_hash.bold().white(), first_filename.bold().white());
@@ -213,7 +213,7 @@ fn main() {
                     let text: String = sha256_content.to_lowercase();
                     if let Some(hash_from_external_file) = find_matching_sha256_for_filename(&text, &lower_computed_hash, true) {
                         let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-                        let shortened_sha256_file_name = shorten_file_name(second_file_name, 24);
+                        let shortened_sha256_file_name = shorten_file_name(second_file_name, 18);
                         let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
                         let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
                         println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
@@ -232,7 +232,7 @@ fn main() {
                 return;
             }
             Ok(false) | Err(_) => {
-                let shortened_second_filename = shorten_file_name(second_file_name, 22);
+                let shortened_second_filename = shorten_file_name(second_file_name, 18);
                 let computed_hash2 = compute_sha256_for_file(&second_file_path, second_file_name, true);
                 let lower_computed_hash2 = computed_hash2.to_lowercase();
                 let (padded_first_filename, padded_second_filename) = pad_strings(&shortened_first_filename, &shortened_second_filename);
