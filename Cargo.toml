@@ -10,3 +10,4 @@ sha2 = "0.10.8"
 colored = "2.1.0"
 spinoff = { version = "0.8.0", features = ["line"] }
 walkdir = "2.5.0"
+regex-lite = "0.1.6"

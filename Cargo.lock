@@ -71,6 +71,7 @@ name = "hasher"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "regex-lite",
  "sha2",
  "spinoff",
  "walkdir",
@@ -108,6 +109,12 @@ name = "portable-atomic"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc9c68a3f6da06753e9335d63e27f6b9754dd1920d941135b7ea8224f141adb2"
+
+[[package]]
+name = "regex-lite"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53a49587ad06b26609c52e423de037e7f57f20d53535d66e08c695f347df952a"
 
 [[package]]
 name = "same-file"
