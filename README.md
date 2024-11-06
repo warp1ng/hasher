@@ -15,7 +15,7 @@ Use `hasher -cr [directory] / hasher -cr` to compare the checksums of a .sha256 
 
 Note: if a directory is not provided for `-wr` and `-cr` switches then the program will use the current directory instead
 
-<img src="./assets/demo.webp" alt="demo" style="zoom: 50%;" />
+<img src="./assets/demo.webp" alt="demo" style="zoom: 25%;" />
 
 ## How to build <a name="building-instructions"></a>
 1. Run `git clone https://github.com/warp1ng/hasher`
