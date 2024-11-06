@@ -89,7 +89,7 @@ fn main() {
                     }
                     let file_hash = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false);
                     let relative_path = strip_prefix(path, &dir);
-                    if let Some(hash_from_external_raw) = find_matching_sha256_for_filename(&text, &file_hash, false) {
+                    if let Some(hash_from_external_raw) = find_matching_sha256_for_filename(&text, &file_hash) {
                         let hash_from_external_file = hash_from_external_raw.to_lowercase();
                         if file_hash == hash_from_external_file {
                             count_good += 1;
@@ -192,16 +192,7 @@ fn main() {
         let lower_arg_hash = arg_hash.to_lowercase();
         let (padded_first_filename, arg_whitespace) = pad_strings(&shortened_first_filename, "USER-SHA256");
         let squiggles = highlight_differences(&lower_computed_hash, &lower_arg_hash, &padded_first_filename);
-        println!("{} : {}", padded_first_filename, lower_computed_hash.bold().white());
-        if squiggles.contains('^') {
-            println!("{}", squiggles);
-        }
-        println!("{} : {}", arg_whitespace, lower_arg_hash.bold().white());
-        if lower_computed_hash == lower_arg_hash {
-            println!("{} Checksums match!", "Status:".truecolor(119, 193, 178));
-        } else {
-            println!("{} Checksums do not match!", "Status:".truecolor(173, 127, 172));
-        }
+        output_result(&lower_computed_hash, &lower_arg_hash, &padded_first_filename, &arg_whitespace, &squiggles);
         return;
     }
     if arg == "-c" && args.len() >= 4 {
@@ -211,22 +202,17 @@ fn main() {
             Ok(true) => {
                 if let Ok(sha256_content) = read_sha256_file(&second_file_path, second_file_name) {
                     let text: String = sha256_content.to_lowercase();
-                    if let Some(hash_from_external_file) = find_matching_sha256_for_filename(&text, &lower_computed_hash, true) {
-                        let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-                        let shortened_sha256_file_name = shorten_file_name(second_file_name, 18);
-                        let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
-                        let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
-                        println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
-                        println!("{} : {}", padded_first_filename, lower_computed_hash.bold().white());
-                        if squiggles.contains('^') {
-                            println!("{}", squiggles);
+                    match find_matching_sha256_for_filename(&text, &lower_computed_hash) {
+                        Some(hash_from_external_file) => {
+                            let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
+                            let shortened_sha256_file_name = shorten_file_name(second_file_name, 18);
+                            let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
+                            let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
+                            println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
+                            output_result(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename, &padded_sha256_file_name, &squiggles);
+                            return;
                         }
-                        println!("{} : {}", padded_sha256_file_name, lower_hash_from_external_file.bold().white());
-                        if lower_hash_from_external_file == lower_computed_hash {
-                            println!("{} Checksums match!", "Status:".truecolor(119, 193, 178));
-                        } else {
-                            println!("{} Checksums do not match!", "Status:".truecolor(173, 127, 172));
-                        }
+                        _ => {}
                     }
                 }
                 return;
@@ -237,16 +223,7 @@ fn main() {
                 let lower_computed_hash2 = computed_hash2.to_lowercase();
                 let (padded_first_filename, padded_second_filename) = pad_strings(&shortened_first_filename, &shortened_second_filename);
                 let squiggles = highlight_differences(&lower_computed_hash, &lower_computed_hash2, &padded_first_filename);
-                println!("{} : {}", padded_first_filename, lower_computed_hash.bold().white());
-                if squiggles.contains('^') {
-                    println!("{}", squiggles);
-                }
-                println!("{} : {}", padded_second_filename, lower_computed_hash2.bold().white());
-                if lower_computed_hash == lower_computed_hash2 {
-                    println!("{} Checksums match!", "Status:".truecolor(119, 193, 178));
-                } else {
-                    println!("{} Checksums do not match!", "Status:".truecolor(173, 127, 172));
-                }
+                output_result(&lower_computed_hash, &lower_computed_hash2, &padded_first_filename, &padded_second_filename, &squiggles);
                 return;
             }
         }
@@ -348,24 +325,17 @@ fn highlight_differences(a: &str, b: &str, c: &str) -> String {
     squiggles
 }
 
-fn find_matching_sha256_for_filename<'a>(text: &'a str, checksum: &str, any_hash: bool) -> Option<&'a str> {
-    for line in text.lines() {
-        for word in line.split_whitespace() {
-            if any_hash {
-                if word.starts_with(checksum) && word.len() == 64 {
-                    return Some(&word[..64]);
-                } else if word.len() == 64 {
-                    return Some(&word[..64]);
-                }
-            } else {
-                if word.starts_with(checksum) && word.len() == 64 {
-                    return Some(&word[..64]);
-                }
-            }
-        }
-    }
-    None
+
+fn find_matching_sha256_for_filename<'a>(text: &'a str, checksum: &str) -> Option<&'a str> {
+    let re = Regex::new(&format!(r"\b{}[0-9a-fA-F]{{{}}}\b", regex_lite::escape(checksum), 64 - checksum.len())).unwrap();
+    let re_any = Regex::new(r"\b[0-9a-fA-F]{64}\b").unwrap();
+    if let Some(capture) = re.find(text) {
+        Some(capture.as_str())
+    } else if let Some(capture) = re_any.find(text) {
+        Some(capture.as_str())
+    } else { None }
 }
+
 
 fn clear_spinner_and_flush(spinner: &mut Spinner) {
     spinner.clear();
@@ -437,4 +407,17 @@ fn check_size(file_path: &PathBuf, file_name: &str) -> Result<bool, io::Error> {
         return Ok(false);
     }
     Ok(true)
+}
+
+fn output_result(lower_checksum_1: &str, lower_checksum_2: &str, padded_filename_1: &str, padded_filename_2: &str, squiggles: &str) {
+    println!("{} : {}", padded_filename_1, lower_checksum_1.bold().white());
+    if squiggles.contains("^") {
+        println!("{}", squiggles)
+    }
+    println!("{} : {}", padded_filename_2, lower_checksum_2.bold().white());
+    if lower_checksum_1 == lower_checksum_2 {
+        println!("{} Checksums match!", "Status:".truecolor(119, 193, 178));
+    } else {
+        println!("{} Checksums do not match!", "Status:".truecolor(173, 127, 172));
+    }
 }
