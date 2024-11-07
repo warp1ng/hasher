@@ -65,95 +65,107 @@ fn main() {
     }
 
     if arg == "-cr" && dir.is_dir() {
-        let dir_name = dir.file_name().unwrap().to_str().unwrap();
-        let checksums_file_name = format!("{}.sha256", dir_name);
-        let checksums_path = dir.join(checksums_file_name.clone());
-        if !checksums_path.exists() {
-            eprintln!("{} file '{}' is missing", "Error:".truecolor(173, 127, 172), checksums_file_name);
-            return;
-        }
-        let mut count_good = 0;
-        let mut count_bad = 0;
-        let mut bad_files: Vec<String> = Vec::new();
-        if let Ok(sha256_content) = read_sha256_file(&checksums_path, dir_name) {
-            let text: String = sha256_content.to_lowercase();
-            let loading_message = format!("Verifying checksums for directory '{}' using file '{}'", dir_name, &checksums_file_name);
-            let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
-            for entry in WalkDir::new(dir.clone()).into_iter().filter_map(Result::ok) {
-                let path = entry.path();
-                if path.is_file() {
-                    if let Some(file_name) = path.file_name() {
-                        if *file_name.to_ascii_lowercase() == *checksums_file_name.to_ascii_lowercase() {
-                            continue;
-                        }
-                    }
-                    let file_hash = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false).to_lowercase();
-                    let relative_path = strip_prefix(path, &dir);
-                    match find_matching_sha256_for_filename(&text, &file_hash) {
-                        Some(_) => {
-                            count_good += 1;
-                        }
-                        _ => {
-                            count_bad += 1;
-                            bad_files.push(relative_path.to_string_lossy().to_string());
-                        }
-                    }
+        if let Some(dir_name_check) = dir.file_name() {
+            if let Some(dir_name) = dir_name_check.to_str() {
+                let checksums_file_name = format!("{}.sha256", dir_name);
+                let checksums_path = dir.join(checksums_file_name.clone());
+                if !checksums_path.exists() {
+                    eprintln!("{} file '{}' is missing", "Error:".truecolor(173, 127, 172), checksums_file_name);
+                    return;
                 }
-            }
-            clear_spinner_and_flush(&mut spinner);
-        }
-        let total_count = count_good + count_bad;
-        if count_bad == 0 {
-            println!("{} All checksums passed!", "Status:".truecolor(119, 193, 178));
-            return;
-        }
-        if count_good == 0 {
-            println!("{} All checksums failed!", "Status:".truecolor(173, 127, 172));
-            return;
-        }
-        println!("Files with mismatched hashes:");
-        for file in bad_files {
-            println!("{}", file);
-        }
+                let mut count_good = 0;
+                let mut count_bad = 0;
+                let mut bad_files: Vec<String> = Vec::new();
+                if let Ok(sha256_content) = read_sha256_file(&checksums_path, dir_name) {
+                    let text: String = sha256_content.to_lowercase();
+                    let loading_message = format!("Verifying checksums for directory '{}' using file '{}'", dir_name, &checksums_file_name);
+                    let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
+                    for entry in WalkDir::new(dir.clone()).into_iter().filter_map(Result::ok) {
+                        let path = entry.path();
+                        if path.is_file() {
+                            if let Some(file_name) = path.file_name() {
+                                if *file_name.to_ascii_lowercase() == *checksums_file_name.to_ascii_lowercase() {
+                                    continue;
+                                }
+                            }
+                            let file_hash = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false).to_lowercase();
+                            let relative_path = strip_prefix(path, &dir);
+                            match find_matching_sha256_for_filename(&text, &file_hash) {
+                                Some(_) => {
+                                    count_good += 1;
+                                }
+                                _ => {
+                                    count_bad += 1;
+                                    bad_files.push(relative_path.to_string_lossy().to_string());
+                                }
+                            }
+                        }
+                    }
+                    clear_spinner_and_flush(&mut spinner);
+                }
+                let total_count = count_good + count_bad;
+                if count_bad == 0 {
+                    println!("{} All checksums passed!", "Status:".truecolor(119, 193, 178));
+                    return;
+                }
+                if count_good == 0 {
+                    println!("{} All checksums failed!", "Status:".truecolor(173, 127, 172));
+                    return;
+                }
+                println!("Files with mismatched hashes:");
+                for file in bad_files {
+                    println!("{}", file);
+                }
 
-        if count_good > count_bad {
-            println!("{} {} out of {} checksums passed!", "Status:".truecolor(119, 193, 178), count_good.to_string(), total_count.to_string());
+                if count_good > count_bad {
+                    println!("{} {} out of {} checksums passed!", "Status:".truecolor(119, 193, 178), count_good.to_string(), total_count.to_string());
+                } else {
+                    println!("{} {} out of {} checksums passed!", "Status:".truecolor(173, 127, 172), count_good.to_string(), total_count.to_string());
+                }
+                return;
+            }
         } else {
-            println!("{} {} out of {} checksums passed!", "Status:".truecolor(173, 127, 172), count_good.to_string(), total_count.to_string());
+            eprintln!("{} directory has no file name", "Error:".truecolor(173, 127, 172));
+            return;
         }
-        return;
     }
 
     if arg == "-wr" && dir.is_dir() {
-        let dir_name = dir.file_name().unwrap().to_str().unwrap();
-        let checksums_file_name = format!("{}.sha256", dir_name);
-        let output_file = dir.join(&checksums_file_name);
-        let mut checksums_file = match File::create(output_file) {
-            Ok(file) => file,
-            Err(e) => {
-                eprintln!("{} failed to create file '{}': {}", "Error:".truecolor(173, 127, 172), dir_name, e);
-                return;
-            }
-        };
-        let loading_message = format!("Computing checksums for directory '{}'", dir_name);
-        let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
-        for entry in WalkDir::new(dir.clone()).into_iter().filter_map(Result::ok) {
-            let path = entry.path();
-            if path.is_file() {
-                if let Some(file_name) = path.file_name() {
-                    if *file_name.to_ascii_lowercase() == *checksums_file_name.to_ascii_lowercase() {
-                        continue;
+        if let Some(dir_name_check) = dir.file_name() {
+            if let Some(dir_name) = dir_name_check.to_str() {
+                let checksums_file_name = format!("{}.sha256", dir_name);
+                let output_file = dir.join(&checksums_file_name);
+                let mut checksums_file = match File::create(output_file) {
+                    Ok(file) => file,
+                    Err(e) => {
+                        eprintln!("{} failed to create file '{}': {}", "Error:".truecolor(173, 127, 172), dir_name, e);
+                        return;
+                    }
+                };
+                let loading_message = format!("Computing checksums for directory '{}'", dir_name);
+                let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
+                for entry in WalkDir::new(dir.clone()).into_iter().filter_map(Result::ok) {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Some(file_name) = path.file_name() {
+                            if *file_name.to_ascii_lowercase() == *checksums_file_name.to_ascii_lowercase() {
+                                continue;
+                            }
+                        }
+                        let result = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false).to_lowercase();
+                        let relative_path = strip_prefix(path, &dir);
+                        let text_to_write = format!("{} {}", result, relative_path.display());
+                        writeln!(checksums_file, "{}", text_to_write).unwrap();
                     }
                 }
-                let result = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false).to_lowercase();
-                let relative_path = strip_prefix(path, &dir);
-                let text_to_write = format!("{} {}", result, relative_path.display());
-                writeln!(checksums_file, "{}", text_to_write).unwrap();
+                clear_spinner_and_flush(&mut spinner);
+                println!("{} file '{}' created and written to successfully", "Status:".truecolor(119, 193, 178), checksums_file_name.bold().white());
+                return;
             }
+        } else {
+            eprintln!("{} directory has no file name", "Error:".truecolor(173, 127, 172));
+            return;
         }
-        clear_spinner_and_flush(&mut spinner);
-        println!("{} file '{}' created and written to successfully", "Status:".truecolor(119, 193, 178), checksums_file_name.bold().white());
-        return;
     }
 
     let raw_first_file_path = PathBuf::from(&args[2]);
@@ -188,13 +200,13 @@ fn main() {
     }
 
     if arg == "-c" && args.len() >= 4 && args[3].len() == 64 {
-        let arg_hash = &args[3];
-        let lower_arg_hash = arg_hash.to_lowercase();
+        let lower_arg_hash = &args[3].to_lowercase();
         let (padded_first_filename, arg_whitespace) = pad_strings(&shortened_first_filename, "USER-SHA256");
         let squiggles = highlight_differences(&lower_computed_hash, &lower_arg_hash, &padded_first_filename);
         output_result(&lower_computed_hash, &lower_arg_hash, &padded_first_filename, &arg_whitespace, &squiggles);
         return;
     }
+
     if arg == "-c" && args.len() >= 4 {
         let second_file_path = PathBuf::from(&args[3]);
         let second_file_name = second_file_path.file_name().unwrap().to_str().unwrap();
