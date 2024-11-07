@@ -47,7 +47,7 @@ fn main() {
     if args.len() == 3 {
         dir = PathBuf::from(&args[2]);
         if !dir.exists() {
-            eprintln!("{} could not find '{}' directory", "Error:".truecolor(173, 127, 172), dir.display().to_string().white().bold());
+            eprintln!("{} could not find '{}' directory", "Error:".truecolor(173, 127, 172), dir.display().to_string());
             return;
         }
     } else {
@@ -69,7 +69,7 @@ fn main() {
         let checksums_file_name = format!("{}.sha256", dir_name);
         let checksums_path = dir.join(checksums_file_name.clone());
         if !checksums_path.exists() {
-            eprintln!("{} file '{}' is missing", "Error:".truecolor(173, 127, 172), checksums_file_name.white().bold());
+            eprintln!("{} file '{}' is missing", "Error:".truecolor(173, 127, 172), checksums_file_name);
             return;
         }
         let mut count_good = 0;
@@ -77,7 +77,7 @@ fn main() {
         let mut bad_files: Vec<String> = Vec::new();
         if let Ok(sha256_content) = read_sha256_file(&checksums_path, dir_name) {
             let text: String = sha256_content.to_lowercase();
-            let loading_message = format!("Verifying checksums for directory '{}'", dir_name.white().bold());
+            let loading_message = format!("Verifying checksums for directory '{}' using file '{}'", dir_name, &checksums_file_name);
             let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
             for entry in WalkDir::new(dir.clone()).into_iter().filter_map(Result::ok) {
                 let path = entry.path();
@@ -87,16 +87,16 @@ fn main() {
                             continue;
                         }
                     }
-                    let file_hash = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false);
+                    let file_hash = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false).to_lowercase();
                     let relative_path = strip_prefix(path, &dir);
-                    if let Some(hash_from_external_raw) = find_matching_sha256_for_filename(&text, &file_hash) {
-                        let hash_from_external_file = hash_from_external_raw.to_lowercase();
-                        if file_hash == hash_from_external_file {
+                    match find_matching_sha256_for_filename(&text, &file_hash) {
+                        Some(_) => {
                             count_good += 1;
                         }
-                    } else {
-                        count_bad += 1;
-                        bad_files.push(relative_path.to_string_lossy().to_string());
+                        _ => {
+                            count_bad += 1;
+                            bad_files.push(relative_path.to_string_lossy().to_string());
+                        }
                     }
                 }
             }
@@ -104,11 +104,11 @@ fn main() {
         }
         let total_count = count_good + count_bad;
         if count_bad == 0 {
-            println!("{} All checksums match!", "Status:".truecolor(119, 193, 178));
+            println!("{} All checksums passed!", "Status:".truecolor(119, 193, 178));
             return;
         }
         if count_good == 0 {
-            println!("{} No checksums match!", "Status:".truecolor(173, 127, 172));
+            println!("{} All checksums failed!", "Status:".truecolor(173, 127, 172));
             return;
         }
         println!("Files with mismatched hashes:");
@@ -117,9 +117,9 @@ fn main() {
         }
 
         if count_good > count_bad {
-            println!("{} {} out of {} checksums match!", "Status:".truecolor(119, 193, 178), count_good.to_string().white().bold(), total_count.to_string().white().bold());
+            println!("{} {} out of {} checksums passed!", "Status:".truecolor(119, 193, 178), count_good.to_string(), total_count.to_string());
         } else {
-            println!("{} {} out of {} checksums match!", "Status:".truecolor(173, 127, 172), count_good.to_string().white().bold(), total_count.to_string().white().bold());
+            println!("{} {} out of {} checksums passed!", "Status:".truecolor(173, 127, 172), count_good.to_string(), total_count.to_string());
         }
         return;
     }
@@ -131,11 +131,11 @@ fn main() {
         let mut checksums_file = match File::create(output_file) {
             Ok(file) => file,
             Err(e) => {
-                eprintln!("{} failed to create file '{}': {}", "Error:".truecolor(173, 127, 172), dir_name.white().bold(), e);
+                eprintln!("{} failed to create file '{}': {}", "Error:".truecolor(173, 127, 172), dir_name, e);
                 return;
             }
         };
-        let loading_message = format!("Computing checksums for directory '{}'", dir_name.white().bold());
+        let loading_message = format!("Computing checksums for directory '{}'", dir_name);
         let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
         for entry in WalkDir::new(dir.clone()).into_iter().filter_map(Result::ok) {
             let path = entry.path();
@@ -145,7 +145,7 @@ fn main() {
                         continue;
                     }
                 }
-                let result = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false);
+                let result = compute_sha256_for_file(&path.to_path_buf(), &checksums_file_name, false).to_lowercase();
                 let relative_path = strip_prefix(path, &dir);
                 let text_to_write = format!("{} {}", result, relative_path.display());
                 writeln!(checksums_file, "{}", text_to_write).unwrap();
@@ -175,12 +175,12 @@ fn main() {
         let mut checksum_file = match File::create(sha256_file_name_raw) {
             Ok(file) => file,
             Err(e) => {
-                eprintln!("{} failed to create file '{}': {}", "Error:".truecolor(173, 127, 172), checksum_file_name.white().bold(), e);
+                eprintln!("{} failed to create file '{}': {}", "Error:".truecolor(173, 127, 172), checksum_file_name, e);
                 return;
             }
         };
         if let Err(e) = checksum_file.write_all(lower_computed_hash_and_filename.as_bytes(), ) {
-            eprintln!("{} failed to write to file '{}': {}", "Error:".truecolor(173, 127, 172), checksum_file_name.white().bold(), e);
+            eprintln!("{} failed to write to file '{}': {}", "Error:".truecolor(173, 127, 172), checksum_file_name, e);
             return;
         }
         println!("{} file '{}' created and written to successfully", "Status:".truecolor(119, 193, 178), checksum_file_name.bold().white());
@@ -212,7 +212,20 @@ fn main() {
                             output_result(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename, &padded_sha256_file_name, &squiggles);
                             return;
                         }
-                        _ => {}
+                        _ => {
+                            match find_any_sha256_for_filename(&text) {
+                                Some(hash_from_external_file) => {
+                                    let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
+                                    let shortened_sha256_file_name = shorten_file_name(second_file_name, 18);
+                                    let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
+                                    let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
+                                    println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
+                                    output_result(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename, &padded_sha256_file_name, &squiggles);
+                                    return;
+                                }
+                                None => {}
+                            }
+                        }
                     }
                 }
                 return;
@@ -243,7 +256,7 @@ fn compute_sha256_for_file(filepath: &PathBuf, filename: &str, spinner_switch: b
     let mut buffer = [0; 65536];
 
     if spinner_switch {
-        let loading_message = format!("Loading file '{}'", filename.white().bold());
+        let loading_message = format!("Loading file '{}'", filename);
         let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
         loop {
             let bytes_read = match reader.read(&mut buffer) {
@@ -325,17 +338,19 @@ fn highlight_differences(a: &str, b: &str, c: &str) -> String {
     squiggles
 }
 
-
 fn find_matching_sha256_for_filename<'a>(text: &'a str, checksum: &str) -> Option<&'a str> {
     let re = Regex::new(&format!(r"\b{}[0-9a-fA-F]{{{}}}\b", regex_lite::escape(checksum), 64 - checksum.len())).unwrap();
-    let re_any = Regex::new(r"\b[0-9a-fA-F]{64}\b").unwrap();
     if let Some(capture) = re.find(text) {
-        Some(capture.as_str())
-    } else if let Some(capture) = re_any.find(text) {
         Some(capture.as_str())
     } else { None }
 }
 
+fn find_any_sha256_for_filename<'a>(text: &'a str) -> Option<&'a str> {
+    let re_any = Regex::new(r"\b[0-9a-fA-F]{64}\b").unwrap();
+    if let Some(capture) = re_any.find(text) {
+        Some(capture.as_str())
+    } else { None }
+}
 
 fn clear_spinner_and_flush(spinner: &mut Spinner) {
     spinner.clear();
@@ -416,8 +431,8 @@ fn output_result(lower_checksum_1: &str, lower_checksum_2: &str, padded_filename
     }
     println!("{} : {}", padded_filename_2, lower_checksum_2.bold().white());
     if lower_checksum_1 == lower_checksum_2 {
-        println!("{} Checksums match!", "Status:".truecolor(119, 193, 178));
+        println!("{} Integrity check passed", "Status:".truecolor(119, 193, 178));
     } else {
-        println!("{} Checksums do not match!", "Status:".truecolor(173, 127, 172));
+        println!("{} Integrity check failed", "Status:".truecolor(173, 127, 172));
     }
 }
