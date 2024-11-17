@@ -5,6 +5,8 @@ Use `hasher -h` for a list of the command line arguments
 
 Use `hasher -s [filename]` to compute the sha256 checksum of the file
 
+Use `hasher -t [text]` to compute the sha256 checksum of some text
+
 Use `hasher -c [filename] [input]` to compare the input's computed checksum against your own `[input]` which can be a checksums, a .sha256 file or another file
 
 Use `hasher -w [filename]` to compute and write the checksum to a file (automatically named after the input file)
