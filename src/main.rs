@@ -16,6 +16,7 @@ fn main() {
         println!("Use hasher -h for help");
         return;
     }
+
     let arg = &args[1].to_lowercase();
 
     if arg != "-s" && arg != "-c" && arg != "-h" && arg != "-w" && arg != "-wr" && arg != "-cr" && arg != "-t" {
@@ -65,7 +66,8 @@ fn main() {
     }
 
     if arg == "-t" {
-        let input: String = args[2..].join(" ").to_string();
+        let raw_input = args.iter().skip(2).map(|s| s.as_str()).collect::<Vec<_>>().join(" ");
+        let input = raw_input.to_lowercase().to_string();
         let mut hasher = Sha256::new();
         hasher.update(input.as_bytes());
         let checksum = format!("{:x}", hasher.finalize());
@@ -179,17 +181,28 @@ fn main() {
     }
 
     let raw_first_file_path = PathBuf::from(&args[2]);
-    let first_filename = raw_first_file_path.file_name().unwrap().to_str().unwrap();
-    let computed_hash = compute_sha256_for_file(&raw_first_file_path, first_filename, true);
+    if !raw_first_file_path.is_file() {
+        eprintln!("{} '-s' switch does not work with directories. use '-wr' instead", "Error:".truecolor(173, 127, 172));
+        return;
+    }
+    let first_filename = raw_first_file_path.file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .replace('"', "")
+        .replace('\'', "")
+        .replace('/', "")
+        .replace('\\', "");
+    let computed_hash = compute_sha256_for_file(&raw_first_file_path, &first_filename, true);
     let lower_computed_hash = computed_hash.to_lowercase();
-    let lower_computed_hash_and_filename = computed_hash + " " + first_filename;
-    let checksum_file_name = format!("{}.sha256", first_filename);
+    let lower_computed_hash_and_filename = computed_hash + " " + &first_filename;
+    let checksum_file_name = format!("{}.sha256", &first_filename);
 
-    let shortened_first_filename = shorten_str(first_filename, 18);
+    let shortened_first_filename = shorten_str(&first_filename, 18);
 
     if arg == "-s" {
         let shortened_first_filename = shorten_str(&first_filename, 18);
-        println!("{} {}", lower_computed_hash.bold().white(), shortened_first_filename);
+        println!("{} : '{}'", lower_computed_hash.bold().white(), shortened_first_filename);
         return;
     }
 
@@ -262,7 +275,7 @@ fn compute_sha256_for_file(filepath: &PathBuf, filename: &str, spinner_switch: b
     let file = match File::open(filepath) {
         Ok(file) => file,
         Err(_e) => {
-            eprintln!("{} failed to open the file '{}'", "Error:".truecolor(173, 127, 172), filename.bold().white());
+            eprintln!("{} failed to open the file {}", "Error:".truecolor(173, 127, 172), filename.bold().white());
             std::process::exit(0);
         }
     };
