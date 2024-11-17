@@ -16,7 +16,6 @@ fn main() {
         println!("Use hasher -h for help");
         return;
     }
-
     let arg = &args[1].to_lowercase();
 
     if arg != "-s" && arg != "-c" && arg != "-h" && arg != "-w" && arg != "-wr" && arg != "-cr" && arg != "-t" {
@@ -66,12 +65,12 @@ fn main() {
     }
 
     if arg == "-t" {
-        let input = String::from(&args[2]);
+        let input: String = args[2..].join(" ").to_string();
         let mut hasher = Sha256::new();
         hasher.update(input.as_bytes());
         let checksum = format!("{:x}", hasher.finalize());
         let shortened_input = shorten_str(&input, 18);
-        println!("{} : {}", checksum.white().bold(), shortened_input);
+        println!("{} : '{}'", checksum.bold().white(), shortened_input);
         return;
     }
 
@@ -189,7 +188,8 @@ fn main() {
     let shortened_first_filename = shorten_str(first_filename, 18);
 
     if arg == "-s" {
-        println!("{} {}", lower_computed_hash.bold().white(), first_filename.bold().white());
+        let shortened_first_filename = shorten_str(&first_filename, 18);
+        println!("{} {}", lower_computed_hash.bold().white(), shortened_first_filename);
         return;
     }
 
@@ -213,7 +213,7 @@ fn main() {
     if arg == "-c" && args.len() >= 4 && args[3].len() == 64 {
         let lower_arg_hash = &args[3].to_lowercase();
         let (padded_first_filename, arg_whitespace) = pad_strings(&shortened_first_filename, "USER-SHA256");
-        let squiggles = highlight_differences(&lower_computed_hash, lower_arg_hash, &padded_first_filename);
+        let squiggles = highlight_differences(&lower_computed_hash, lower_arg_hash);
         output_result(&lower_computed_hash, lower_arg_hash, &padded_first_filename, &arg_whitespace, &squiggles);
         return;
     }
@@ -230,7 +230,7 @@ fn main() {
                             let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                             let shortened_sha256_file_name = shorten_str(second_file_name, 18);
                             let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
-                            let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
+                            let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
                             println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
                             output_result(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename, &padded_sha256_file_name, &squiggles);
                         }
@@ -239,7 +239,7 @@ fn main() {
                                     let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                                     let shortened_sha256_file_name = shorten_str(second_file_name, 18);
                                     let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
-                                    let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
+                                    let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
                                     println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
                                     output_result(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename, &padded_sha256_file_name, &squiggles);
                             }
@@ -252,7 +252,7 @@ fn main() {
                 let computed_hash2 = compute_sha256_for_file(&second_file_path, second_file_name, true);
                 let lower_computed_hash2 = computed_hash2.to_lowercase();
                 let (padded_first_filename, padded_second_filename) = pad_strings(&shortened_first_filename, &shortened_second_filename);
-                let squiggles = highlight_differences(&lower_computed_hash, &lower_computed_hash2, &padded_first_filename);
+                let squiggles = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
                 output_result(&lower_computed_hash, &lower_computed_hash2, &padded_first_filename, &padded_second_filename, &squiggles);
             }
         }
@@ -332,17 +332,11 @@ fn read_sha256_file(file_path: &PathBuf, filename: &str) -> io::Result<String> {
     Ok(sha256_content)
 }
 
-fn highlight_differences(a: &str, b: &str, c: &str) -> String {
+fn highlight_differences(a: &str, b: &str) -> String {
     let max_len = std::cmp::max(a.len(), b.len());
-
     let a_padded = format!("{:width$}", a, width = max_len);
     let b_padded = format!("{:width$}", b, width = max_len);
-
     let mut squiggles = String::new();
-
-    let offset = " ".repeat(c.len() + 3);
-    squiggles.push_str(&offset);
-
     for (char_a, char_b) in a_padded.chars().zip(b_padded.chars()) {
         if char_a == char_b {
             squiggles.push_str(&"|".truecolor(119, 193, 178).to_string());
@@ -398,10 +392,8 @@ fn pad_strings(str1: &str, str2: &str) -> (String, String) {
 
 fn shorten_str(file_name: &str, max_len: usize) -> String {
     if file_name.len() > max_len {
-        let end_len = 7;
-        let start_len = max_len - end_len - 3;
-        let start = &file_name[..start_len];
-        let end = &file_name[file_name.len() - end_len..];
+        let start = &file_name[..9];
+        let end = &file_name[file_name.len() - 9..];
         format!("{}...{}", start, end)
     } else {
         file_name.to_string()
