@@ -19,7 +19,7 @@ fn main() {
 
     let arg = &args[1].to_lowercase();
 
-    if arg != "-s" && arg != "-c" && arg != "-h" && arg != "-w" && arg != "-wr" && arg != "-cr" {
+    if arg != "-s" && arg != "-c" && arg != "-h" && arg != "-w" && arg != "-wr" && arg != "-cr" && arg != "-t" {
         println!("Use hasher -h for help");
         return;
     }
@@ -44,7 +44,7 @@ fn main() {
     }
 
     let dir;
-    if args.len() == 3 {
+    if args.len() == 3 && arg == "-wr" || arg == "-cr" {
         dir = PathBuf::from(&args[2]);
         if !dir.exists() {
             eprintln!("{} could not find '{}' directory", "Error:".truecolor(173, 127, 172), dir.display());
@@ -61,6 +61,16 @@ fn main() {
 
     if arg == "-cr" && !dir.is_dir() {
         println!("{} '-cr' switch requires a directory", "Error:".truecolor(173, 127, 172));
+        return;
+    }
+
+    if arg == "-t" {
+        let input = String::from(&args[2]);
+        let mut hasher = Sha256::new();
+        hasher.update(input.as_bytes());
+        let checksum = format!("{:x}", hasher.finalize());
+        let shortened_input = shorten_str(&input, 18);
+        println!("{} : {}", checksum.white().bold(), shortened_input);
         return;
     }
 
@@ -175,7 +185,7 @@ fn main() {
     let lower_computed_hash_and_filename = computed_hash + " " + first_filename;
     let checksum_file_name = format!("{}.sha256", first_filename);
 
-    let shortened_first_filename = shorten_file_name(first_filename, 18);
+    let shortened_first_filename = shorten_str(first_filename, 18);
 
     if arg == "-s" {
         println!("{} {}", lower_computed_hash.bold().white(), first_filename.bold().white());
@@ -217,7 +227,7 @@ fn main() {
                     match find_matching_sha256_for_filename(&text, &lower_computed_hash) {
                         Some(hash_from_external_file) => {
                             let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-                            let shortened_sha256_file_name = shorten_file_name(second_file_name, 18);
+                            let shortened_sha256_file_name = shorten_str(second_file_name, 18);
                             let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
                             let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
                             println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
@@ -226,7 +236,7 @@ fn main() {
                         _ => {
                             if let Some (hash_from_external_file) = find_any_sha256_for_filename(&text) {
                                     let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
-                                    let shortened_sha256_file_name = shorten_file_name(second_file_name, 18);
+                                    let shortened_sha256_file_name = shorten_str(second_file_name, 18);
                                     let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
                                     let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename);
                                     println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
@@ -237,7 +247,7 @@ fn main() {
                 }
             }
             Ok(false) | Err(_) => {
-                let shortened_second_filename = shorten_file_name(second_file_name, 18);
+                let shortened_second_filename = shorten_str(second_file_name, 18);
                 let computed_hash2 = compute_sha256_for_file(&second_file_path, second_file_name, true);
                 let lower_computed_hash2 = computed_hash2.to_lowercase();
                 let (padded_first_filename, padded_second_filename) = pad_strings(&shortened_first_filename, &shortened_second_filename);
@@ -385,7 +395,7 @@ fn pad_strings(str1: &str, str2: &str) -> (String, String) {
     (padded_str1, padded_str2)
 }
 
-fn shorten_file_name(file_name: &str, max_len: usize) -> String {
+fn shorten_str(file_name: &str, max_len: usize) -> String {
     if file_name.len() > max_len {
         let end_len = 7;
         let start_len = max_len - end_len - 3;
@@ -430,11 +440,11 @@ fn check_size(file_path: &PathBuf, file_name: &str) -> Result<bool, io::Error> {
 }
 
 fn output_result(lower_checksum_1: &str, lower_checksum_2: &str, padded_filename_1: &str, padded_filename_2: &str, squiggles: &str) {
-    println!("{} : {}", padded_filename_1, lower_checksum_1.bold().white());
+    println!("{} : '{}'", lower_checksum_1.bold().white(), padded_filename_1.trim());
     if squiggles.contains('^') {
         println!("{}", squiggles)
     }
-    println!("{} : {}", padded_filename_2, lower_checksum_2.bold().white());
+    println!("{} : '{}'", lower_checksum_2.bold().white(), padded_filename_2.trim());
     if lower_checksum_1 == lower_checksum_2 {
         println!("{} Integrity check passed", "Status:".truecolor(119, 193, 178));
     } else {
