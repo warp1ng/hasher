@@ -45,7 +45,8 @@ fn main() {
     }
 
     let dir;
-    if args.len() == 3 && arg == "-wr" || arg == "-cr" {
+    if args.len() == 3 && (arg == "-wr" || arg == "-cr") {
+        println!("{}", &args[2]);
         dir = PathBuf::from(&args[2]);
         if !dir.exists() {
             eprintln!("{} could not find '{}' directory", "Error:".truecolor(173, 127, 172), dir.display());
