@@ -276,7 +276,7 @@ fn compute_sha256_for_file(filepath: &PathBuf, filename: &str, spinner_switch: b
     let file = match File::open(filepath) {
         Ok(file) => file,
         Err(_e) => {
-            eprintln!("{} failed to open the file {}", "Error:".truecolor(173, 127, 172), filename.bold().white());
+            eprintln!("{} failed to open the file '{}'", "Error:".truecolor(173, 127, 172), filename.bold().white());
             std::process::exit(0);
         }
     };
