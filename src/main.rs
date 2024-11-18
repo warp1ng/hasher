@@ -26,7 +26,7 @@ fn main() {
     if &args[1] == "-h" {
         println!("Usage:");
         println!("-s [filename] to compute the sha256 checksum of the file");
-        println!("-t [text] to compute the sha256 checksum of some text");
+        println!("-t ['text'] to compute the sha256 checksum of some text");
         println!("-c [filename] [input] to compare the input's computed checksum against your own [input] which can be a checksums, a .sha256 file or another file");
         println!("-w [filename] to compute and write the checksum to a file (automatically named after the input file)");
         println!("-wr / -wr [directory] to compute and write the checksums of all files in a directory to a file");
