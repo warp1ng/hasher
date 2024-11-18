@@ -182,7 +182,7 @@ fn main() {
     }
 
     let raw_first_file_path = PathBuf::from(&args[2]);
-    if !raw_first_file_path.is_file() {
+    if raw_first_file_path.is_dir() {
         eprintln!("{} the '{}' switch does not work with directories. use '-wr' or '-cr' instead", "Error:".truecolor(173, 127, 172), &arg.bold().white());
         return;
     }
