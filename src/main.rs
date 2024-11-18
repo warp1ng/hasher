@@ -68,7 +68,7 @@ fn main() {
 
     if arg == "-t" {
         let raw_input = args.iter().skip(2).map(|s| s.as_str()).collect::<Vec<_>>().join(" ");
-        let input = raw_input.to_lowercase().to_string();
+        let input = raw_input.to_string();
         let mut hasher = Sha256::new();
         hasher.update(input.as_bytes());
         let checksum = format!("{:x}", hasher.finalize());
