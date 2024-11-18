@@ -226,9 +226,8 @@ fn main() {
 
     if arg == "-c" && args.len() >= 4 && args[3].len() == 64 {
         let lower_arg_hash = &args[3].to_lowercase();
-        let (padded_first_filename, arg_whitespace) = pad_strings(&shortened_first_filename, "USER-SHA256");
         let squiggles = highlight_differences(&lower_computed_hash, lower_arg_hash);
-        output_result(&lower_computed_hash, lower_arg_hash, &padded_first_filename, &arg_whitespace, &squiggles);
+        output_result(&lower_computed_hash, lower_arg_hash, &shortened_first_filename, "USER-SHA256", &squiggles);
         return;
     }
 
@@ -243,19 +242,17 @@ fn main() {
                         Some(hash_from_external_file) => {
                             let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                             let shortened_sha256_file_name = shorten_str(second_file_name, 18);
-                            let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
                             let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
                             println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
-                            output_result(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename, &padded_sha256_file_name, &squiggles);
+                            output_result(&lower_computed_hash, &lower_hash_from_external_file, &shortened_first_filename, &shortened_sha256_file_name, &squiggles);
                         }
                         _ => {
                             if let Some (hash_from_external_file) = find_any_sha256_for_filename(&text) {
                                     let lower_hash_from_external_file = hash_from_external_file.to_lowercase();
                                     let shortened_sha256_file_name = shorten_str(second_file_name, 18);
-                                    let (padded_first_filename, padded_sha256_file_name) = pad_strings(&shortened_first_filename, &shortened_sha256_file_name);
                                     let squiggles = highlight_differences(&lower_computed_hash, &lower_hash_from_external_file);
                                     println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), second_file_name.bold().white());
-                                    output_result(&lower_computed_hash, &lower_hash_from_external_file, &padded_first_filename, &padded_sha256_file_name, &squiggles);
+                                    output_result(&lower_computed_hash, &lower_hash_from_external_file, &shortened_first_filename, &shortened_sha256_file_name, &squiggles);
                             }
                         }
                     }
@@ -265,9 +262,8 @@ fn main() {
                 let shortened_second_filename = shorten_str(second_file_name, 18);
                 let computed_hash2 = compute_sha256_for_file(&second_file_path, second_file_name, true);
                 let lower_computed_hash2 = computed_hash2.to_lowercase();
-                let (padded_first_filename, padded_second_filename) = pad_strings(&shortened_first_filename, &shortened_second_filename);
                 let squiggles = highlight_differences(&lower_computed_hash, &lower_computed_hash2);
-                output_result(&lower_computed_hash, &lower_computed_hash2, &padded_first_filename, &padded_second_filename, &squiggles);
+                output_result(&lower_computed_hash, &lower_computed_hash2, &shortened_first_filename, &shortened_second_filename, &squiggles);
             }
         }
     }
@@ -383,25 +379,6 @@ fn clear_spinner_and_flush(spinner: &mut Spinner) {
 
 fn strip_prefix<'a>(full_path: &'a Path, base_path: &Path) -> &'a Path {
     full_path.strip_prefix(base_path).unwrap_or(full_path)
-}
-
-fn pad_strings(str1: &str, str2: &str) -> (String, String) {
-    let len1 = str1.len();
-    let len2 = str2.len();
-
-    let padded_str1 = if len1 < len2 {
-        format!("{:width$}", str1, width = len2)
-    } else {
-        str1.to_string()
-    };
-
-    let padded_str2 = if len2 < len1 {
-        format!("{:width$}", str2, width = len1)
-    } else {
-        str2.to_string()
-    };
-
-    (padded_str1, padded_str2)
 }
 
 fn shorten_str(file_name: &str, max_len: usize) -> String {
