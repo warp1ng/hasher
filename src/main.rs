@@ -391,17 +391,9 @@ fn highlight_differences(a: &str, b: &str) -> String {
 }
 
 fn find_matching_sha256_for_filename<'a>(text: &'a str, checksum: &str) -> Option<&'a str> {
-    let re = Regex::new(&format!(r"\b{}[0-9a-fA-F]{{{}}}\b", regex_lite::escape(checksum), 64 - checksum.len())).unwrap();
-    if let Some(capture) = re.find(text) {
-        Some(capture.as_str())
-    } else {
-        let re_any = Regex::new(r"\b[0-9a-fA-F]{64}\b").unwrap();
-        if let Some(capture) = re_any.find(text) {
-            Some(capture.as_str())
-        } else {
-            None
-        }
-    }
+    let re = Regex::new(&format!(r"\b{}[0-9a-fA-F]{{{}}}\b", checksum, 64 - checksum.len()))
+        .expect("Invalid regex");
+    re.find(text).map(|m| m.as_str())
 }
 
 fn clear_spinner_and_flush(spinner: &mut Spinner) {
