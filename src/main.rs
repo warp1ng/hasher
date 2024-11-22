@@ -10,10 +10,7 @@ use walkdir::WalkDir;
 use std::path::Path;
 use regex_lite::Regex;
 
-use std::time::Instant;
-
 fn main() {
-    let start = Instant::now();
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 || args[1].is_empty() {
         println!("Use hasher -h for help");
@@ -220,31 +217,19 @@ fn main() {
             return;
         }
     }
-    let elapsed_1 = start.elapsed();
-    println!("{:?}", elapsed_1);
 
     if arg == "-c" && args.len() >= 4 {
         let first_file_path = PathBuf::from(&args[2]);
         let second_file_path = PathBuf::from(&args[3]);
-        let elapsed_2 = start.elapsed();
-        println!("{:?}", elapsed_2);
         let first_filename = first_file_path.file_name().unwrap().to_str().unwrap();
         let second_filename = second_file_path.file_name().unwrap().to_str().unwrap();
-        let elapsed_3 = start.elapsed();
-        println!("{:?}", elapsed_3);
         let shortened_first_filename = shorten_str(&first_filename, 18);
         let shortened_second_filename = shorten_str(&second_filename, 18);
         let file_1_result = is_file_sha(&first_file_path);
-        let elapsed_4 = start.elapsed();
-        println!("{:?}", elapsed_4);
         let file_2_result = is_file_sha(&second_file_path);
-        let elapsed_5 = start.elapsed();
-        println!("{:?}", elapsed_5);
         match (file_1_result, file_2_result) {
             (Ok((Some(sha), true)), Ok((Some(_sha2), true))) => {
                 let checksum_1 = compute_sha_for_file(&first_file_path, &first_filename, true).to_lowercase();
-                let elapsed_6 = start.elapsed();
-                println!("{:?}", elapsed_6);
                 let checksum_2 = sha.to_lowercase();
                 let squiggles = highlight_differences(&checksum_1, &checksum_2);
                 println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
@@ -253,16 +238,12 @@ fn main() {
             (Ok((Some(sha), true)), Ok((None, false))) => {
                 let checksum_1 = sha.to_lowercase();
                 let checksum_2 = compute_sha_for_file(&second_file_path, &second_filename, true).to_lowercase();
-                let elapsed_6 = start.elapsed();
-                println!("{:?}", elapsed_6);
                 let squiggles = highlight_differences(&checksum_1, &checksum_2);
                 println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_first_filename.bold().white());
                 output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
             } // file 1 contains checksum
             (Ok((None, false)), Ok((Some(sha), true))) => {
                 let checksum_1 = compute_sha_for_file(&first_file_path, &first_filename, true).to_lowercase();
-                let elapsed_6 = start.elapsed();
-                println!("{:?}", elapsed_6);
                 let checksum_2 = sha.to_lowercase();
                 let squiggles = highlight_differences(&checksum_1, &checksum_2);
                 println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
@@ -379,7 +360,7 @@ fn is_file_sha(filepath: &PathBuf) -> io::Result<(Option<String>, bool)> {
     if let Some(mat) = sha256_regex.find(&file_str) {
         return Ok((Some(mat.as_str().to_string()), true));
     }
-    
+
     Ok((None, false))
 }
 
