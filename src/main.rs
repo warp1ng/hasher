@@ -244,12 +244,12 @@ fn main() {
                     None => {eprintln!("{} processing file {} failed", "Error:".truecolor(173, 127, 172), shortened_second_filename.bold().white());}
                 }
             } 
-            (Ok((Some(sha), true)), Ok((None, false))) => { // file 1 contains checksum
-                let checksum_1 = sha.to_lowercase();
+            (Ok((Some(_sha), true)), Ok((None, false))) => { // file 1 contains checksum
+                let checksum_1 = compute_sha_for_file(&second_file_path, &shortened_second_filename, true);
                 match return_checksum(&first_file_path, &shortened_first_filename, &checksum_1) {
                     Some((checksum_2, squiggles)) => {
-                        println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
-                        output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
+                        println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_first_filename.bold().white());
+                        output_result(&checksum_2, &checksum_1, &shortened_first_filename, &shortened_second_filename, &squiggles)
                     }
                     None => {eprintln!("{} processing file {} failed", "Error:".truecolor(173, 127, 172), shortened_first_filename.bold().white());}
                 }
