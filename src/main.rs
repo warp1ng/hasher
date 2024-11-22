@@ -1,4 +1,4 @@
-use std::io::{self, BufRead, BufReader, Read, Write};
+use std::io::{self, BufReader, Read, Write};
 use std::{env, fs};
 use std::env::current_dir;
 use std::fs::File;
@@ -10,7 +10,10 @@ use walkdir::WalkDir;
 use std::path::Path;
 use regex_lite::Regex;
 
+use std::time::Instant;
+
 fn main() {
+    let start = Instant::now();
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 || args[1].is_empty() {
         println!("Use hasher -h for help");
@@ -188,11 +191,7 @@ fn main() {
     }
 
     if arg == "-s" || arg == "-w" {
-        let first_filename = raw_first_file_path.file_name()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .replace(['"', '\'', '/', '\\'], "");
+        let first_filename = raw_first_file_path.file_name().unwrap().to_string_lossy();
         let computed_hash = compute_sha_for_file(&raw_first_file_path, &first_filename, true);
         let lower_computed_hash = computed_hash.to_lowercase();
         let lower_computed_hash_and_filename = computed_hash + " " + &first_filename;
@@ -221,19 +220,31 @@ fn main() {
             return;
         }
     }
+    let elapsed_1 = start.elapsed();
+    println!("{:?}", elapsed_1);
 
     if arg == "-c" && args.len() >= 4 {
         let first_file_path = PathBuf::from(&args[2]);
         let second_file_path = PathBuf::from(&args[3]);
-        let first_filename = first_file_path.file_name().unwrap().to_str().unwrap().to_owned();
-        let second_filename = second_file_path.file_name().unwrap().to_str().unwrap().to_owned();
+        let elapsed_2 = start.elapsed();
+        println!("{:?}", elapsed_2);
+        let first_filename = first_file_path.file_name().unwrap().to_str().unwrap();
+        let second_filename = second_file_path.file_name().unwrap().to_str().unwrap();
+        let elapsed_3 = start.elapsed();
+        println!("{:?}", elapsed_3);
         let shortened_first_filename = shorten_str(&first_filename, 18);
         let shortened_second_filename = shorten_str(&second_filename, 18);
         let file_1_result = is_file_sha(&first_file_path);
+        let elapsed_4 = start.elapsed();
+        println!("{:?}", elapsed_4);
         let file_2_result = is_file_sha(&second_file_path);
+        let elapsed_5 = start.elapsed();
+        println!("{:?}", elapsed_5);
         match (file_1_result, file_2_result) {
             (Ok((Some(sha), true)), Ok((Some(_sha2), true))) => {
                 let checksum_1 = compute_sha_for_file(&first_file_path, &first_filename, true).to_lowercase();
+                let elapsed_6 = start.elapsed();
+                println!("{:?}", elapsed_6);
                 let checksum_2 = sha.to_lowercase();
                 let squiggles = highlight_differences(&checksum_1, &checksum_2);
                 println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
@@ -242,12 +253,16 @@ fn main() {
             (Ok((Some(sha), true)), Ok((None, false))) => {
                 let checksum_1 = sha.to_lowercase();
                 let checksum_2 = compute_sha_for_file(&second_file_path, &second_filename, true).to_lowercase();
+                let elapsed_6 = start.elapsed();
+                println!("{:?}", elapsed_6);
                 let squiggles = highlight_differences(&checksum_1, &checksum_2);
                 println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_first_filename.bold().white());
                 output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
             } // file 1 contains checksum
             (Ok((None, false)), Ok((Some(sha), true))) => {
                 let checksum_1 = compute_sha_for_file(&first_file_path, &first_filename, true).to_lowercase();
+                let elapsed_6 = start.elapsed();
+                println!("{:?}", elapsed_6);
                 let checksum_2 = sha.to_lowercase();
                 let squiggles = highlight_differences(&checksum_1, &checksum_2);
                 println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
@@ -319,7 +334,7 @@ fn compute_sha_for_file(filepath: &PathBuf, filename: &str, spinner_switch: bool
 }
 
 fn read_sha256_file(file_path: &PathBuf, filename: &str) -> io::Result<String> {
-    let file_metadata = match std::fs::metadata(file_path) {
+    let file_metadata = match fs::metadata(file_path) {
         Ok(metadata) => metadata,
         Err(e) => {
             eprintln!("{} failed to open the file '{}'", "Error:".truecolor(173, 127, 172), &filename.bold().white());
@@ -346,31 +361,25 @@ fn read_sha256_file(file_path: &PathBuf, filename: &str) -> io::Result<String> {
 
 
 fn is_file_sha(filepath: &PathBuf) -> io::Result<(Option<String>, bool)> {
-    let sha256_regex = Regex::new(r"\b[a-fA-F0-9]{64}\b").unwrap();
-
     let file_metadata = fs::metadata(filepath)?;
     if file_metadata.len() > 10 * 1024 * 1024 {
         return Ok((None, false));
     }
 
     let file_content = fs::read(filepath)?;
-    let loading_message = format!("Loading file '{}'", filepath.file_name().unwrap().to_str().unwrap());
-    let mut spinner = Spinner::new_with_stream(spinners::Line, loading_message, Color::White, Streams::Stdout);
 
     let file_str = match String::from_utf8(file_content) {
         Ok(content) => content,
         Err(_) => {
-            clear_spinner_and_flush(&mut spinner);
             return Ok((None, false));
         }
     };
 
+    let sha256_regex = Regex::new(r"\b[a-fA-F0-9]{64}\b").unwrap();
     if let Some(mat) = sha256_regex.find(&file_str) {
-        clear_spinner_and_flush(&mut spinner);
         return Ok((Some(mat.as_str().to_string()), true));
     }
-
-    clear_spinner_and_flush(&mut spinner);
+    
     Ok((None, false))
 }
 
