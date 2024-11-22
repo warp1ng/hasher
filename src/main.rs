@@ -219,6 +219,12 @@ fn main() {
     }
 
     if arg == "-c" && args.len() >= 4 {
+        if args[2].len() == 64 && args[3].len() == 64 {
+            let checksum_1 = args[2].to_lowercase();
+            let checksum_2 = args[3].to_lowercase();
+            let squiggles = highlight_differences(&checksum_1, &checksum_2);
+            output_result(&checksum_1, &checksum_2, "USER-SHA-1", "USER-SHA-2", &squiggles)
+        }
         let first_file_path = PathBuf::from(&args[2]);
         let second_file_path = PathBuf::from(&args[3]);
         let first_filename = first_file_path.file_name().unwrap().to_str().unwrap();
@@ -228,75 +234,49 @@ fn main() {
         let file_1_result = is_file_sha(&first_file_path);
         let file_2_result = is_file_sha(&second_file_path);
         match (file_1_result, file_2_result) {
-            (Ok((Some(_sha), true)), Ok((Some(_sha2), true))) => {
+            (Ok((Some(_sha), true)), Ok((Some(_sha2), true))) => { // both contain checksum
                 let checksum_1 = compute_sha_for_file(&first_file_path, &first_filename, true).to_lowercase();
-                if let Ok(content) = read_sha256_file(&second_file_path, &shortened_second_filename) {
-                    let file_str = match String::from_utf8(Vec::from(content)) {
-                        Ok(content) => content,
-                        Err(_) => {
-                            return;
-                        }
-                    };
-                    let re = Regex::new(&format!(r"\b{}[0-9a-fA-F]{{{}}}\b", regex_lite::escape(&checksum_1), 64 - &checksum_1.len())).unwrap();
-                    let mat = re.find(&file_str);
-                    let checksum_2 = mat.unwrap().as_str().trim().to_string();
-                    let squiggles = highlight_differences(&checksum_1, &checksum_2);
-                    println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
-                    output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
+                match return_checksum(&second_file_path, &shortened_second_filename, &checksum_1) {
+                    Some((checksum_2, squiggles)) => {
+                        println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
+                        output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
+                    }
+                    None => {eprintln!("{} processing file {} failed", "Error:".truecolor(173, 127, 172), shortened_second_filename.bold().white());}
                 }
-            } // both contain checksum
-            (Ok((Some(sha), true)), Ok((None, false))) => {
+            } 
+            (Ok((Some(sha), true)), Ok((None, false))) => { // file 1 contains checksum
                 let checksum_1 = sha.to_lowercase();
-                if let Ok(content) = read_sha256_file(&first_file_path, &first_filename) {
-                    let file_str = match String::from_utf8(Vec::from(content)) {
-                        Ok(content) => content,
-                        Err(_) => {
-                            return;
-                        }
-                    };
-                    let re = Regex::new(&format!(r"\b{}[0-9a-fA-F]{{{}}}\b", regex_lite::escape(&checksum_1), 64 - &checksum_1.len())).unwrap();
-                    let mat = re.find(&file_str);
-                    let checksum_2 = mat.unwrap().as_str().trim().to_string();
-                    let squiggles = highlight_differences(&checksum_1, &checksum_2);
-                    println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
-                    output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
+                match return_checksum(&first_file_path, &shortened_first_filename, &checksum_1) {
+                    Some((checksum_2, squiggles)) => {
+                        println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
+                        output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
+                    }
+                    None => {eprintln!("{} processing file {} failed", "Error:".truecolor(173, 127, 172), shortened_first_filename.bold().white());}
                 }
-            } // file 1 contains checksum
-            (Ok((None, false)), Ok((Some(_sha), true))) => {
+            }
+            (Ok((None, false)), Ok((Some(_sha), true))) => { // file 2 contains checksum
                 let checksum_1 = compute_sha_for_file(&first_file_path, &first_filename, true).to_lowercase();
-                if let Ok(content) = read_sha256_file(&second_file_path, &shortened_second_filename) {
-                    let file_str = match String::from_utf8(Vec::from(content)) {
-                        Ok(content) => content,
-                        Err(_) => {
-                            return;
-                        }
-                    };
-                    let re = Regex::new(&format!(r"\b{}[0-9a-fA-F]{{{}}}\b", regex_lite::escape(&checksum_1), 64 - &checksum_1.len())).unwrap();
-                    let mat = re.find(&file_str);
-                    let checksum_2 = mat.unwrap().as_str().trim().to_string();
-                    let squiggles = highlight_differences(&checksum_1, &checksum_2);
-                    println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
-                    output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
+                match return_checksum(&second_file_path, &shortened_second_filename, &checksum_1) {
+                    Some((checksum_2, squiggles)) => {
+                        println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
+                        output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
+                    }
+                    None => {eprintln!("{} processing file {} failed", "Error:".truecolor(173, 127, 172), shortened_second_filename.bold().white());}
                 }
-            } // file 2 contains checksum
-            (Ok((None, false)), Ok((None, false))) => {
+            }
+            (Ok((None, false)), Ok((None, false))) => { // neither contain checksum
                 let checksum_1 = compute_sha_for_file(&first_file_path, &first_filename, true).to_lowercase();
                 let checksum_2 = compute_sha_for_file(&second_file_path, &second_filename, true).to_lowercase();
                 let squiggles = highlight_differences(&checksum_1, &checksum_2);
                 output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
-            } // neither contain checksum
-            (Err(_e), _) => {
-                return;
-            }
-            (_, Err(_e)) => {
-                return;
             }
             _ => {}
-        }
+        } 
+
     }
 }
 
-fn compute_sha_for_file(filepath: &PathBuf, filename: &str, spinner_switch: bool) -> String {
+    fn compute_sha_for_file(filepath: &PathBuf, filename: &str, spinner_switch: bool) -> String {
     let file = match File::open(filepath) {
         Ok(file) => file,
         Err(_e) => {
@@ -441,6 +421,26 @@ fn shorten_str(file_name: &str, max_len: usize) -> String {
     } else {
         file_name.to_string()
     }
+}
+
+fn return_checksum(file_path: &PathBuf, shortened_filename: &str, checksum_1: &str, ) -> Option<(String, String)> {
+    let content = read_sha256_file(&file_path, shortened_filename);
+    let file_str = content.unwrap().to_string();
+    let re = Regex::new(&format!(
+        r"\b{}[0-9a-fA-F]{{{}}}\b",
+        regex_lite::escape(checksum_1),
+        64 - checksum_1.len()
+    )).ok()?;
+    let checksum_2 = if let Some(mat) = re.find(&file_str) {
+        mat.as_str().trim().to_string()
+    } else {
+        let re_any = Regex::new(r"\b[0-9a-fA-F]{64}\b").unwrap();
+        re_any.find(&file_str)?.as_str().trim().to_string()
+    };
+
+    let squiggles = highlight_differences(checksum_1, &checksum_2);
+    Some((checksum_2, squiggles))
+    
 }
 
  fn output_result(lower_checksum_1: &str, lower_checksum_2: &str, padded_filename_1: &str, padded_filename_2: &str, squiggles: &str) {
