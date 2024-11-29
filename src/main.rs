@@ -67,7 +67,7 @@ fn main() {
     }
 
     if arg == "-t" {
-        let raw_input = args.iter().skip(2).map(|s| s.as_str()).collect::<Vec<_>>().join(" ");
+        let raw_input = &args[2];
         let input = raw_input.to_string();
         let mut hasher = Sha256::new();
         hasher.update(input.as_bytes());
@@ -180,14 +180,14 @@ fn main() {
             return;
         }
     }
-
-    let raw_first_file_path = PathBuf::from(&args[2]);
-    if raw_first_file_path.is_dir() {
-        eprintln!("{} the '{}' switch does not work with directories. use '-wr' or '-cr' instead", "Error:".truecolor(173, 127, 172), &arg.bold().white());
-        return;
-    }
+    
 
     if arg == "-s" || arg == "-w" {
+        let raw_first_file_path = PathBuf::from(&args[2]);
+        if !raw_first_file_path.is_file() {
+            eprintln!("{} the '{}' switch does not work with directories. use '-wr' or '-cr' instead", "Error:".truecolor(173, 127, 172), &arg.bold().white());
+            return;
+        }
         let first_filename = raw_first_file_path.file_name().unwrap().to_string_lossy();
         let computed_hash = compute_sha_for_file(&raw_first_file_path, &first_filename, true);
         let lower_computed_hash = computed_hash.to_lowercase();
@@ -227,6 +227,10 @@ fn main() {
         }
         let first_file_path = PathBuf::from(&args[2]);
         let second_file_path = PathBuf::from(&args[3]);
+        if first_file_path.exists() && first_file_path.is_dir() || first_file_path.exists() && first_file_path.is_dir() {
+            eprintln!("{} the '{}' switch does not work with directories. use '-wr' or '-cr' instead", "Error:".truecolor(173, 127, 172), &arg.bold().white());
+            return;
+        }
         let first_filename = first_file_path.file_name().unwrap().to_str().unwrap();
         let second_filename = second_file_path.file_name().unwrap().to_str().unwrap();
         let shortened_first_filename = shorten_str(&first_filename, 18);
@@ -271,8 +275,7 @@ fn main() {
                 output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
             }
             _ => {}
-        } 
-
+        }
     }
 }
 
@@ -352,9 +355,12 @@ fn read_sha256_file(file_path: &PathBuf, filename: &str) -> io::Result<String> {
 
 
 fn is_file_sha(filepath: &PathBuf) -> io::Result<(Option<String>, bool)> {
-    let file_metadata = fs::metadata(filepath)?;
-    if file_metadata.len() > 10 * 1024 * 1024 {
-        return Ok((None, false));
+    if let Ok(file_metadata) = fs::metadata(&filepath) {
+        if file_metadata.len() > 10 * 1024 * 1024 { // 10 MB
+            return Ok((None, false));
+        }
+    } else { 
+        eprintln!("{} failed to open file '{}'", "Error:".truecolor(173, 127, 172), filepath.file_name().unwrap().to_str().unwrap().bold().white());
     }
 
     let file_content = fs::read(filepath)?;
