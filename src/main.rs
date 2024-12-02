@@ -235,6 +235,20 @@ fn main() {
         let second_filename = second_file_path.file_name().unwrap().to_str().unwrap();
         let shortened_first_filename = shorten_str(&first_filename, 18);
         let shortened_second_filename = shorten_str(&second_filename, 18);
+        if args[2].len() == 64 {
+            let checksum_1 = args[2].to_lowercase();
+            let checksum_2 = compute_sha_for_file(&second_file_path, &second_filename, true);
+            let squiggles = highlight_differences(&checksum_1, &checksum_2);
+            output_result(&checksum_1, &checksum_2, "USER-SHA", &shortened_second_filename, &squiggles);
+            return;
+        }
+        if args[3].len() == 64 {
+            let checksum_1 = args[3].to_lowercase();
+            let checksum_2 = compute_sha_for_file(&first_file_path, &first_filename, true);
+            let squiggles = highlight_differences(&checksum_1, &checksum_2);
+            output_result(&checksum_2, &checksum_1, &shortened_first_filename, "USER-SHA", &squiggles);
+            return;
+        }
         let file_1_result = is_file_sha(&first_file_path);
         let file_2_result = is_file_sha(&second_file_path);
         match (file_1_result, file_2_result) {
@@ -359,7 +373,7 @@ fn is_file_sha(filepath: &PathBuf) -> io::Result<(Option<String>, bool)> {
         if file_metadata.len() > 10 * 1024 * 1024 { // 10 MB
             return Ok((None, false));
         }
-    } else { 
+    } else {
         eprintln!("{} failed to open file '{}'", "Error:".truecolor(173, 127, 172), filepath.file_name().unwrap().to_str().unwrap().bold().white());
     }
 
