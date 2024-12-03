@@ -9,6 +9,7 @@ use std::path::{PathBuf};
 use walkdir::WalkDir;
 use std::path::Path;
 use regex_lite::Regex;
+use encoding_rs::UTF_16LE;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -233,18 +234,18 @@ fn main() {
         }
         let first_filename = first_file_path.file_name().unwrap().to_str().unwrap();
         let second_filename = second_file_path.file_name().unwrap().to_str().unwrap();
-        let shortened_first_filename = shorten_str(&first_filename, 18);
-        let shortened_second_filename = shorten_str(&second_filename, 18);
+        let shortened_first_filename = shorten_str(first_filename, 18);
+        let shortened_second_filename = shorten_str(second_filename, 18);
         if args[2].len() == 64 {
             let checksum_1 = args[2].to_lowercase();
-            let checksum_2 = compute_sha_for_file(&second_file_path, &second_filename, true);
+            let checksum_2 = compute_sha_for_file(&second_file_path, second_filename, true);
             let squiggles = highlight_differences(&checksum_1, &checksum_2);
             output_result(&checksum_1, &checksum_2, "USER-SHA", &shortened_second_filename, &squiggles);
             return;
         }
         if args[3].len() == 64 {
             let checksum_1 = args[3].to_lowercase();
-            let checksum_2 = compute_sha_for_file(&first_file_path, &first_filename, true);
+            let checksum_2 = compute_sha_for_file(&first_file_path, first_filename, true);
             let squiggles = highlight_differences(&checksum_1, &checksum_2);
             output_result(&checksum_2, &checksum_1, &shortened_first_filename, "USER-SHA", &squiggles);
             return;
@@ -253,7 +254,7 @@ fn main() {
         let file_2_result = is_file_sha(&second_file_path);
         match (file_1_result, file_2_result) {
             (Ok((Some(_sha), true)), Ok((Some(_sha2), true))) => { // both contain checksum
-                let checksum_1 = compute_sha_for_file(&first_file_path, &first_filename, true).to_lowercase();
+                let checksum_1 = compute_sha_for_file(&first_file_path, first_filename, true).to_lowercase();
                 match return_checksum(&second_file_path, &shortened_second_filename, &checksum_1) {
                     Some((checksum_2, squiggles)) => {
                         println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
@@ -273,7 +274,7 @@ fn main() {
                 }
             }
             (Ok((None, false)), Ok((Some(_sha), true))) => { // file 2 contains checksum
-                let checksum_1 = compute_sha_for_file(&first_file_path, &first_filename, true).to_lowercase();
+                let checksum_1 = compute_sha_for_file(&first_file_path, first_filename, true).to_lowercase();
                 match return_checksum(&second_file_path, &shortened_second_filename, &checksum_1) {
                     Some((checksum_2, squiggles)) => {
                         println!("{} hasher read directly from file '{}'", "Warning:".truecolor(119, 193, 178), shortened_second_filename.bold().white());
@@ -283,8 +284,8 @@ fn main() {
                 }
             }
             (Ok((None, false)), Ok((None, false))) => { // neither contain checksum
-                let checksum_1 = compute_sha_for_file(&first_file_path, &first_filename, true).to_lowercase();
-                let checksum_2 = compute_sha_for_file(&second_file_path, &second_filename, true).to_lowercase();
+                let checksum_1 = compute_sha_for_file(&first_file_path, first_filename, true).to_lowercase();
+                let checksum_2 = compute_sha_for_file(&second_file_path, second_filename, true).to_lowercase();
                 let squiggles = highlight_differences(&checksum_1, &checksum_2);
                 output_result(&checksum_1, &checksum_2, &shortened_first_filename, &shortened_second_filename, &squiggles)
             }
@@ -293,7 +294,7 @@ fn main() {
     }
 }
 
-    fn compute_sha_for_file(filepath: &PathBuf, filename: &str, spinner_switch: bool) -> String {
+fn compute_sha_for_file(filepath: &PathBuf, filename: &str, spinner_switch: bool) -> String {
     let file = match File::open(filepath) {
         Ok(file) => file,
         Err(_e) => {
@@ -337,39 +338,73 @@ fn main() {
             hasher.update(&buffer[..bytes_read]);
         }
         let result = hasher.finalize();
-        format!("{:x}", result)
+        format!("{:x}", result) 
     }
 }
 
 fn read_sha256_file(file_path: &PathBuf, filename: &str) -> io::Result<String> {
-    let file_metadata = match fs::metadata(file_path) {
+    let file_metadata = match std::fs::metadata(file_path) {
         Ok(metadata) => metadata,
         Err(e) => {
-            eprintln!("{} failed to open the file '{}'", "Error:".truecolor(173, 127, 172), &filename.bold().white());
+            eprintln!(
+                "{} failed to open the file '{}'",
+                "Error:".truecolor(173, 127, 172),
+                &filename.bold().white()
+            );
             return Err(e);
         }
     };
-    const MAX_FILE_SIZE_BYTES: u64 = 100 * 1024 * 1024;
-    if file_metadata.len() > MAX_FILE_SIZE_BYTES {
-        eprintln!("{} File '{}' size exceeds 100MB", "Error:".truecolor(173, 127, 172), filename);
+    
+    if file_metadata.len() > 50 * 1024 * 1024{  // 50 MB 
+        eprintln!(
+            "{} File '{}' size exceeds 50MB",
+            "Error:".truecolor(173, 127, 172),
+            filename
+        );
         return Ok(Default::default());
     }
-    let mut sha256_file = File::open(file_path)?;
-    let mut sha256_content = String::new();
-    sha256_file.read_to_string(&mut sha256_content).map_err(|e| {
-        eprintln!("{} failed to read '{}' file content: {}", "Error:".truecolor(173, 127, 172), filename.bold().white(), e);
+
+    let mut file = File::open(file_path)?;
+    let mut raw_content = Vec::new();
+    file.read_to_end(&mut raw_content).map_err(|e| {
+        eprintln!(
+            "{} failed to read '{}' file content: {}",
+            "Error:".truecolor(173, 127, 172),
+            filename.bold().white(),
+            e
+        );
         e
     })?;
-    if sha256_content.is_empty() {
-        eprintln!("{} file '{}' is empty", "Error:".truecolor(173, 127, 172), filename);
+
+    if raw_content.is_empty() {
+        eprintln!(
+            "{} file '{}' is empty",
+            "Error:".truecolor(173, 127, 172),
+            filename
+        );
         return Ok(Default::default());
     }
-    Ok(sha256_content)
+    
+    if let Ok(utf8_content) = std::str::from_utf8(&raw_content) {
+        return Ok(utf8_content.to_string());
+    }
+    
+    let (utf16_decoded, _, had_errors) = UTF_16LE.decode(&raw_content);
+    if had_errors {
+        eprintln!(
+            "{} failed to decode file '{}' as UTF-8 or UTF-16 LE",
+            "Error:".truecolor(173, 127, 172),
+            filename
+        );
+        return Ok(Default::default());
+    }
+
+    Ok(utf16_decoded.to_string())
 }
 
 
 fn is_file_sha(filepath: &PathBuf) -> io::Result<(Option<String>, bool)> {
-    if let Ok(file_metadata) = fs::metadata(&filepath) {
+    if let Ok(file_metadata) = fs::metadata(filepath) {
         if file_metadata.len() > 10 * 1024 * 1024 { // 10 MB
             return Ok((None, false));
         }
@@ -378,12 +413,22 @@ fn is_file_sha(filepath: &PathBuf) -> io::Result<(Option<String>, bool)> {
     }
 
     let file_content = fs::read(filepath)?;
+    let file_str = if let Ok(content) = String::from_utf8(file_content.clone()) {
+        content
+    } else if file_content.len() >= 2 && file_content[0] == 0xFF && file_content[1] == 0xFE {
+        let utf16_data: Vec<u16> = file_content[2..]
+            .chunks(2)
+            .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+            .collect();
 
-    let file_str = match String::from_utf8(file_content) {
-        Ok(content) => content,
-        Err(_) => {
-            return Ok((None, false));
+        match String::from_utf16(&utf16_data) {
+            Ok(content) => content,
+            Err(_) => {
+                return Ok((None, false));
+            }
         }
+    } else {
+        return Ok((None, false));
     };
 
     let sha256_regex = Regex::new(r"\b[a-fA-F0-9]{64}\b").unwrap();
@@ -436,7 +481,7 @@ fn shorten_str(file_name: &str, max_len: usize) -> String {
 }
 
 fn return_checksum(file_path: &PathBuf, shortened_filename: &str, checksum_1: &str, ) -> Option<(String, String)> {
-    let content = read_sha256_file(&file_path, shortened_filename);
+    let content = read_sha256_file(file_path, shortened_filename);
     let file_str = content.unwrap().to_string();
     let re = Regex::new(&format!(
         r"\b{}[0-9a-fA-F]{{{}}}\b",
