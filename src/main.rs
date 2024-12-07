@@ -446,9 +446,9 @@ fn highlight_differences(a: &str, b: &str) -> String {
     let mut squiggles = String::new();
     for (char_a, char_b) in a_padded.chars().zip(b_padded.chars()) {
         if char_a == char_b {
-            squiggles.push_str(&"|".truecolor(119, 193, 178).to_string());
+            squiggles.push_str(" ");
         } else {
-            squiggles.push_str(&"^".truecolor(173, 127, 172).to_string());
+            squiggles.push_str(&"~".truecolor(173, 127, 172).to_string());
         }
     }
 
@@ -502,7 +502,7 @@ fn return_checksum(file_path: &PathBuf, shortened_filename: &str, checksum_1: &s
 
  fn output_result(lower_checksum_1: &str, lower_checksum_2: &str, padded_filename_1: &str, padded_filename_2: &str, squiggles: &str) {
      println!("{} : '{}'", lower_checksum_1.bold().white(), padded_filename_1.trim());
-     if squiggles.contains('^') {
+     if squiggles.contains('~') {
          println!("{}", squiggles)
      }
      println!("{} : '{}'", lower_checksum_2.bold().white(), padded_filename_2.trim());
