@@ -224,7 +224,8 @@ fn main() {
             let checksum_1 = args[2].to_lowercase();
             let checksum_2 = args[3].to_lowercase();
             let squiggles = highlight_differences(&checksum_1, &checksum_2);
-            output_result(&checksum_1, &checksum_2, "USER-SHA-1", "USER-SHA-2", &squiggles)
+            output_result(&checksum_1, &checksum_2, "USER-SHA-1", "USER-SHA-2", &squiggles);
+            return;
         }
         let first_file_path = PathBuf::from(&args[2]);
         let second_file_path = PathBuf::from(&args[3]);
