@@ -26,13 +26,13 @@ fn main() {
     }
     if &args[1] == "-h" {
         println!("Usage:");
-        println!("-s [filename] to compute the sha256 checksum of the file");
-        println!("-t ['text'] to compute the sha256 checksum of some text");
-        println!("-c [filename] [input] to compare the input's computed checksum against your own [input] which can be a checksums, a .sha256 file or another file");
-        println!("-w [filename] to compute and write the checksum to a file (automatically named after the input file)");
-        println!("-wr / -wr [directory] to compute and write the checksums of all files in a directory to a file");
-        println!("-cr / -cr [directory] to compare the checksums of a .sha256 file located inside the directory to all the files there");
-        println!("note: both '-wr' and '-cr' switches can be run as is to use the current directory");
+        println!("-s <filename>         prints the checksum of a file");
+        println!("-t <text>             prints the checksum of input text");
+        println!("-c <input> <input>    compares files, checksums or a mix of both. if a file contains a checksum it will be read");
+        println!("-w <filename>         generates and writes the checksum to a file");
+        println!("-wr / -wr <directory> generates and writes the checksums of all files in a directory to a SHA256 file");
+        println!("-cr / -cr <directory> compares the checksums of all files in a directory to a SHA256 file located inside");
+        println!("Note: both '-wr' and '-cr' switches default to the current dir if no path is specified");
         return;
     }
     if args.len() < 3 && arg != "-cr" && arg != "-wr" {
