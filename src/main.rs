@@ -31,7 +31,7 @@ fn main() {
         println!("-c <input> <input>    compares files, checksums or a mix of both. if a file contains a checksum it will be read");
         println!("-w <filename>         generates and writes the checksum to a file");
         println!("-wr / -wr <directory> generates and writes the checksums of all files in a directory to a SHA256 file");
-        println!("-cr / -cr <directory> compares the checksums of all files in a directory to a SHA256 file located inside");
+        println!("-cr / -cr <directory> compares the checksums of all files in a directory to a SHA256 file");
         println!("Note: both '-wr' and '-cr' switches default to the current dir if no path is specified");
         return;
     }
