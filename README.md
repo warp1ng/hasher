@@ -16,7 +16,7 @@ A command-line SHA256 utility
 
 - `-c <input> <input>`: Compares two inputs, which can be files, checksums, or a mix. Supports the following:  
   - file vs. file: `hasher -c file1.txt file2.txt`  
-  - file vs. `.sha256`: `hasher -c file.txt file.sha256`  
+  - file vs. `.sha256`: `hasher -c file.png file.png.sha256`  
   - hash vs. file: `hasher -c <hash> file.txt`  
   - hash vs. hash: `hasher -c <hash1> <hash2>`
 
@@ -33,5 +33,6 @@ A command-line SHA256 utility
 
 ## Notes
 
+- Using the `-c` option with a `.sha256` or `.txt` file will attempt to read the file instead of computing a checksum
 - Both `-wr` and `-cr` default to the current directory if no path is specified
 - A `.sha256` file must exist in the directory for `-cr` to work
