@@ -511,7 +511,7 @@ fn return_checksum(file_path: &PathBuf, shortened_filename: &str, checksum_1: &s
  fn output_result(lower_checksum_1: &str, lower_checksum_2: &str, padded_filename_1: &str, padded_filename_2: &str, squiggles: &str) {
      println!("{} : '{}'", lower_checksum_1.bold().white(), padded_filename_1.trim());
      if squiggles.contains('~') {
-         println!("{}", squiggles)
+         println!("{}", squiggles.bold())
      }
      println!("{} : '{}'", lower_checksum_2.bold().white(), padded_filename_2.trim());
      if lower_checksum_1 == lower_checksum_2 {
